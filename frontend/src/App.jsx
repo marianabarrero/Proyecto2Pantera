@@ -66,7 +66,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
     palette: {
       mode: 'dark',
       primary: {
-        main: '#8B5CF6', // sky-500
+        main: '#0d47a1', // sky-500
       },
       background: {
         paper: 'rgba(255, 255, 255, 0.1)',
@@ -83,7 +83,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
       MuiPickersToolbar: {
         styleOverrides: {
           root: {
-            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+            backgroundColor: 'rgba(13, 71, 161, 0.2)',
           },
         },
       },
@@ -169,6 +169,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
                   value={startDate}
                   onChange={(newValue) => setStartDate(newValue)}
                   maxDate={dayjs()} // No se pueden seleccionar fechas futuras
+                  timeSteps={{ minutes: 1 }} // cualquier minuto se puede seleccionar
                   sx={{
                     backgroundColor: 'rgba(0, 0, 0, 0.2)', // Fondo un poco más oscuro
                     borderRadius: '2rem', // Bordes más redondeados
@@ -188,6 +189,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
                   onChange={(newValue) => setEndDate(newValue)}
                   minDate={startDate} // No se puede seleccionar antes de la fecha de inicio
                   disabled={!startDate} // Deshabilitado hasta que se elija fecha de inicio
+                  timeSteps={{ minutes: 1 }} //cualquier minuto se puede seleccionar
                   sx={{
                     backgroundColor: 'rgba(0, 0, 0, 0.2)', // Fondo un poco más oscuro
                     borderRadius: '2rem', // Bordes más redondeados
