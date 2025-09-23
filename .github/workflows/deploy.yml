@@ -1,0 +1,73 @@
+name: Deploy Full-Stack to 4 EC2 Instances
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      # Se activa si hay cambios en el backend, frontend o el propio workflow
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Opcional: si un despliegue falla, los otros continuarán.
+      matrix:
+        # Define las 4 instancias en las que se desplegará
+        instance: [1]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy to EC2 Instance ${{ matrix.instance }}
+      env:
+        # Selecciona los secretos de GitHub dinámicamente para cada instancia
+        HOST: ${{ secrets[format('EC2_HOST_{0}', matrix.instance)] }}
+        USER: ${{ secrets[format('EC2_USER_{0}', matrix.instance)] }}
+        KEY: ${{ secrets[format('EC2_SSH_KEY_{0}', matrix.instance)] }}
+        ENV_BACKEND: ${{ secrets[format('ENV_FILE_BACKEND_{0}', matrix.instance)] }}
+        ENV_FRONTEND: ${{ secrets[format('ENV_FILE_FRONTEND_{0}', matrix.instance)] }}
+      run: |
+        echo "🚀 Iniciando despliegue en la instancia ${{ matrix.instance }}..."
+        
+        # Crear el archivo de llave SSH temporalmente
+        echo "$KEY" > deploy_key
+        chmod 600 deploy_key
+        
+        # Script de despliegue remoto vía SSH
+        ssh -o StrictHostKeyChecking=no -i deploy_key ${USER}@${HOST} "
+          cd /opt/location-tracker
+          
+          # 1. Actualizar el código desde el repositorio
+          echo '📦 Actualizando código desde Git...'
+          git pull origin main
+          
+          # 2. Configurar y reiniciar el Backend Python
+          echo '⚙️  Configurando Backend Python...'
+          cd backend
+          echo '$ENV_BACKEND' > .env
+          
+          # Instalar/actualizar dependencias de Python
+          # Activar entorno virtual e instalar/actualizar dependencias de Python
+          source venv/bin/activate
+          pip install -r requirements.txt
+          
+          # Reiniciar el servicio con PM2
+          pm2 restart location-backend-py || pm2 start run.py --name location-backend-py --interpreter python3
+          
+          # 3. Configurar y construir el Frontend
+          echo '🖥️  Configurando Frontend...'
+          cd ../frontend
+          echo '$ENV_FRONTEND' > .env
+          npm install
+          npm run build
+          
+          # 4. Recargar Nginx para aplicar cambios del frontend
+          echo '🌐 Recargando Nginx...'
+          sudo nginx -t && sudo systemctl reload nginx
+          
+          echo '✅ Despliegue completado exitosamente en la instancia ${{ matrix.instance }}'
+        "
