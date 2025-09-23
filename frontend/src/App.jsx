@@ -16,7 +16,7 @@ import './App.css';
 // --- Configuración Básica ---
 const config = {
   API_BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
-  APP_NAME: 'Pantera track',
+  APP_NAME: 'Pantera tracks',
   APP_SUBTITLE: 'Just UDP Location Service',
   APP_VERSION: '2.0.0',
   POLLING_INTERVAL: import.meta.env.VITE_POLLING_INTERVAL || 5000,
