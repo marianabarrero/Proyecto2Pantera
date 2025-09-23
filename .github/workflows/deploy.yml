@@ -16,7 +16,7 @@ jobs:
       fail-fast: false # Opcional: si un despliegue falla, los otros continuarán.
       matrix:
         # Define las 4 instancias en las que se desplegará
-        instance: [1]
+        instance: [1,2,3,4]
 
     steps:
     - name: Checkout code
