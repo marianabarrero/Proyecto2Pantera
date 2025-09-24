@@ -492,7 +492,7 @@ function App() {
                   }}
                   className="flex items-left gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white rounded-xl shadow-lg transition-all font-medium"
                 >
-                  Volver a Tiempo Real
+                  return to live mode
                 </button>
               </div>
             )}
