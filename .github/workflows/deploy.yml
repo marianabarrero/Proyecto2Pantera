@@ -63,6 +63,11 @@ jobs:
           echo '🖥️  Configurando Frontend...'
           cd ../frontend
           echo '$ENV_FRONTEND' > .env
+          
+          # Personalizar el título del HTML con el nombre de la instancia
+          echo '🏷️  Personalizando título para instancia ${{ matrix.instance }}...'
+          sed -i \"s|<title>.*</title>|<title>$NAME</title>|g\" index.html
+          
           npm install
           npm run build
           
