@@ -16,7 +16,7 @@ import './App.css';
 // --- Configuración Básica ---
 const config = {
   API_BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
-  APP_NAME: 'Pantera tracks',
+  APP_NAME: 'Pantera tracker',
   APP_SUBTITLE: 'Just UDP Location Service',
   APP_VERSION: '2.0.0',
   POLLING_INTERVAL: import.meta.env.VITE_POLLING_INTERVAL || 5000,
@@ -243,7 +243,7 @@ const LocationInfo = ({ location, formatTimestamp, onOpenDateSearch }) => (
   <>
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong '>
       <div className=' rounded-4xl h-auto'>
-        <h2 className='text-2xl font-bold text-white text-center rounded-4xl mb-8'>Last Location Received</h2>
+        <h2 className='text-2xl font-bold text-white text-center rounded-4xl mb-8'>Last Location </h2>
 
         <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
           <div className='flex flex-row gap-2 justify-left'>
@@ -492,7 +492,7 @@ function App() {
                   }}
                   className="flex items-left gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white rounded-xl shadow-lg transition-all font-medium"
                 >
-                  return to live mode
+                  Return to live mode
                 </button>
               </div>
             )}
