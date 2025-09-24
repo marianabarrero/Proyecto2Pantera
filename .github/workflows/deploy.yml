@@ -1,9 +1,10 @@
-name: Deploy Full-Stack to EC2 Instances
+name: Deploy Full-Stack to 4 EC2 Instances
 
 on:
   push:
     branches: [ main ]
     paths:
+      # Se activa si hay cambios en el backend, frontend o el propio workflow
       - 'frontend/**'
       - 'backend/**'
       - '.github/workflows/deploy.yml'
@@ -12,11 +13,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: false # Opcional: si un despliegue falla, los otros continuarán.
       matrix:
-        # Asegúrate de que aquí estén todas tus instancias.
-        # Si tienes 4, debería ser [1, 2, 3, 4]
-        instance: [1, 2, 3, 4] 
+        # Define las 4 instancias en las que se desplegará
+        instance: [1,2,3,4]
 
     steps:
     - name: Checkout code
@@ -24,61 +24,51 @@ jobs:
 
     - name: Deploy to EC2 Instance ${{ matrix.instance }}
       env:
+        # Selecciona los secretos de GitHub dinámicamente para cada instancia
         HOST: ${{ secrets[format('EC2_HOST_{0}', matrix.instance)] }}
         USER: ${{ secrets[format('EC2_USER_{0}', matrix.instance)] }}
         KEY: ${{ secrets[format('EC2_SSH_KEY_{0}', matrix.instance)] }}
         ENV_BACKEND: ${{ secrets[format('ENV_FILE_BACKEND_{0}', matrix.instance)] }}
         ENV_FRONTEND: ${{ secrets[format('ENV_FILE_FRONTEND_{0}', matrix.instance)] }}
-        # ¡NUEVO! Leemos el secret con el nombre para esta instancia
-        INSTANCE_NAME: ${{ secrets[format('NAME_{0}', matrix.instance)] }}
+        NAME: ${{ secrets[format('NAME_{0}', matrix.instance)] }}
       run: |
         echo "🚀 Iniciando despliegue en la instancia ${{ matrix.instance }}..."
         
+        # Crear el archivo de llave SSH temporalmente
         echo "$KEY" > deploy_key
         chmod 600 deploy_key
-
-        # Combinamos el .env base del frontend con la nueva variable para el título
-        FULL_FRONTEND_ENV="${ENV_FRONTEND}
-        VITE_APP_TITLE=${INSTANCE_NAME}"
         
-        # Usamos un Heredoc para pasar los comandos de forma más segura y limpia
-        ssh -o StrictHostKeyChecking=no -i deploy_key ${USER}@${HOST} bash -s -- <<EOF
-          set -e # Terminar el script si un comando falla
+        # Script de despliegue remoto vía SSH
+        ssh -o StrictHostKeyChecking=no -i deploy_key ${USER}@${HOST} "
           cd /opt/location-tracker
           
-          # 1. Configurar git para evitar errores de ownership
-          git config --global --add safe.directory /opt/location-tracker
-          
-          # 2. Actualizar el código desde el repositorio
+          # 1. Actualizar el código desde el repositorio
           echo '📦 Actualizando código desde Git...'
           git pull origin main
           
-          # --- 3. Configurar y reiniciar el Backend (Python) ---
-          echo '⚙️  Configurando Backend en Python...'
+          # 2. Configurar y reiniciar el Backend Python
+          echo '⚙️  Configurando Backend Python...'
           cd backend
-          # Crear .env para el backend
-          echo "${ENV_BACKEND}" > .env
-          # Instalar dependencias (asumiendo que tienes un venv)
-          # Si no tienes venv, ajusta la ruta a pip
-          /usr/bin/python3 -m venv venv
+          echo '$ENV_BACKEND' > .env
+          
+          # Instalar/actualizar dependencias de Python
+          # Activar entorno virtual e instalar/actualizar dependencias de Python
           source venv/bin/activate
           pip install -r requirements.txt
-          deactivate
-          # Reiniciar el proceso de PM2
-          sudo pm2 restart location-backend
           
-          # --- 4. Configurar y construir el Frontend ---
+          # Reiniciar el servicio con PM2
+          pm2 restart location-backend-py || pm2 start run.py --name location-backend-py --interpreter python3
+          
+          # 3. Configurar y construir el Frontend
           echo '🖥️  Configurando Frontend...'
           cd ../frontend
-          # Crear .env del frontend con el título dinámico
-          echo "${FULL_FRONTEND_ENV}" > .env
-          # Instalar dependencias y construir
+          echo '$ENV_FRONTEND' > .env
           npm install
           npm run build
           
-          # --- 5. Recargar Nginx ---
+          # 4. Recargar Nginx para aplicar cambios del frontend
           echo '🌐 Recargando Nginx...'
           sudo nginx -t && sudo systemctl reload nginx
           
-          echo "✅ Despliegue completado exitosamente en la instancia ${{ matrix.instance }} con el título: ${INSTANCE_NAME}"
-        EOF
+          echo '✅ Despliegue completado exitosamente en la instancia ${{ matrix.instance }}'
+        "
