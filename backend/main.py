@@ -77,7 +77,7 @@ async def get_latest_location():
 
 @app.get("/api/location/all", response_model=list[AllLocationsResponse])
 async def get_all_locations(limit: int = Query(default=100, ge=1, le=1000)):
-    """Endpoint para obtener todos los registros (opcional)"""
+    """Endpoint para obtener todos los registros """
     try:
         results = await db.get_all_locations(limit)
         return [AllLocationsResponse(**result) for result in results]
@@ -94,7 +94,7 @@ async def get_location_range(
 ):
     """Endpoint para obtener registros por rango de fechas"""
     try:
-        # Ya no necesitamos parsear, las variables ya son objetos datetime.
+        # Ya no necesitamos un formato de texto a otro, las variables ya son objetos datetime.
         start_time = int(startDate.timestamp() * 1000)
         end_time = int(endDate.timestamp() * 1000)
         

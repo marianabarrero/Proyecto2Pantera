@@ -50,7 +50,7 @@ class Database:
     async def insert_location(self, data):
         """Inserta una nueva ubicación"""
         query = """
-        INSERT INTO location_data 
+        INSERT INTO location_data
         (latitude, longitude, timestamp_value, accuracy, altitude, speed, provider)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id;
@@ -97,7 +97,7 @@ class Database:
             
     async def get_locations_by_range(self, start_time, end_time):
         """Obtiene ubicaciones por rango de fechas"""
-        # --- LÍNEA CORREGIDA ---
+
         # Se añade created_at a la consulta para evitar el error de validación
         query = """
         SELECT latitude, longitude, timestamp_value, created_at
