@@ -7,7 +7,8 @@ import { ThreeDot } from 'react-loading-indicators';
 // --- MUI Date Picker Imports ---
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { StaticDateTimePicker } from '@mui/x-date-pickers/StaticDateTimePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import dayjs from 'dayjs';
 
@@ -155,46 +156,21 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
 
         <ThemeProvider theme={darkTheme}>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Start Date Picker */}
-              <div>
-                <label className="block text-white text-lg font-medium mb-4 text-center">
-                  Start Date
-                </label>
-                <StaticDateTimePicker
-                  orientation="landscape"
-                  value={startDate}
-                  onChange={(newValue) => setStartDate(newValue)}
-                  maxDate={dayjs()} // No se pueden seleccionar fechas futuras
-                  timeSteps={{ minutes: 1 }} // cualquier minuto se puede seleccionar
-                  sx={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)', // Fondo un poco más oscuro
-                    borderRadius: '2rem', // Bordes más redondeados
-                    color: '#FFFFFF', // Texto blanco
-                  }}
-                />
-              </div>
-
-              {/* End Date Picker */}
-              <div>
-                <label className="block text-white text-lg font-medium mb-4 text-center">
-                  End Date
-                </label>
-                <StaticDateTimePicker
-                  orientation="landscape"
-                  value={endDate}
-                  onChange={(newValue) => setEndDate(newValue)}
-                  minDate={startDate} // No se puede seleccionar antes de la fecha de inicio
-                  disabled={!startDate} // Deshabilitado hasta que se elija fecha de inicio
-                  timeSteps={{ minutes: 1 }} //cualquier minuto se puede seleccionar
-                  sx={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)', // Fondo un poco más oscuro
-                    borderRadius: '2rem', // Bordes más redondeados
-                    color: '#FFFFFF', // Texto blanco
-                  }}
-                />
-              </div>
-            </div>
+            <DemoContainer components={['DateTimePicker', 'DateTimePicker']}>
+              <DateTimePicker
+                label="Start Date"
+                value={startDate}
+                onChange={(newValue) => setStartDate(newValue)}
+                maxDate={dayjs()} // No se pueden seleccionar fechas futuras
+              />
+              <DateTimePicker
+                label="End Date"
+                value={endDate}
+                onChange={(newValue) => setEndDate(newValue)}
+                minDate={startDate} // No se puede seleccionar antes de la fecha de inicio
+                disabled={!startDate} // Deshabilitado hasta que se elija fecha de inicio
+              />
+            </DemoContainer>
           </LocalizationProvider>
         </ThemeProvider>
 
