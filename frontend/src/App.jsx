@@ -43,7 +43,7 @@ const LoadingSpinner = () => (
 const ErrorMessage = ({ error, onRetry }) => (
   <div className="glassmorphism-strong mt-40 md:-mt-60 rounded-4xl min-w-[90%] mx-auto p-8 text-center">
     <div className="text-red-400 mb-4">
-      <h3 className="text-xl font-bold">Error de Conexión</h3>
+      <h3 className="text-xl font-bold">Atención</h3>
     </div>
     <p className="text-white/70 mb-4">{error}</p>
     <button onClick={onRetry} className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-colors">
@@ -389,7 +389,7 @@ function App() {
       } else {
         // Si no hay datos, limpiamos la ruta y mostramos un mensaje
         setPath([]);
-        setError('No se encontraron datos de ubicación para el rango seleccionado.');
+        setError('No hay datos de ubicación en este tiempo.');
         setLocationData(null); // Opcional: limpiar la última ubicación conocida
       }
 
@@ -450,7 +450,7 @@ function App() {
         {loading ? (
           <LoadingSpinner />
         ) : error ? (
-          <ErrorMessage error={error} onRetry={isLiveMode ? fetchLatestLocation : () => setError(null)} />
+          <ErrorMessage error={error} onRetry={isLiveMode ? fetchLatestLocation : () => window.location.reload()} retryText={isLiveMode ? "Reintentar" : "Volver al menú principal"} />
         ) : locationData ? (
           <>
             {/* --- BOTÓN PARA VOLVER A MODO EN VIVO --- */}
