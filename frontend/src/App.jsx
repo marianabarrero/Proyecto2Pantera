@@ -67,7 +67,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
         main: '#0d47a1', // sky-500
       },
       background: {
-        paper: 'rgba(255, 255, 255, 0.1)',
+        paper: '#1a237e',
       },
       text: {
         primary: '#FFFFFF',
