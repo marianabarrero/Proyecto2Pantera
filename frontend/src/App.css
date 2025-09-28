@@ -354,3 +354,10 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover { /* <-- Y aquí tam
     transform: translateY(-2px);
   }
 }
+.interactive-glow {
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.interactive-glow:hover {
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.4); /* Un resplandor color sky-400 */
+}
