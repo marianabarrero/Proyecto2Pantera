@@ -284,7 +284,7 @@ const LocationMap = ({ location, formatTimestamp, path }) => {
       <MapContainer
         center={position}
         zoom={18}
-        style={{ height: '35rem', width: '100%', borderRadius: '1rem' }}
+        style={{ height: '45rem', width: '100%', borderRadius: '1rem' }}
       >
         {/* --- CAMBIO AQUÍ --- */}
         <TileLayer
@@ -437,15 +437,9 @@ function App() {
         </div>
       </div>
 
-      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 min-w-[80%] md:min-w-[90%] py-3 px-4 rounded-4xl">
-        <div className="flex flex-col items-center gap-2">
-          <h1 className="py-1 px-3 text-center font-bold text-white/80 text-7xl">
-            {config.APP_NAME}
-          </h1>
-        </div>
-      </header>
 
-      <main className='flex flex-col md:flex-row items-center mt-50 md:mt-15 justify-between gap-2 max-w-[90%] mx-auto min-h-screen'>
+
+      <main className='flex flex-col md:flex-row items-center justify-center gap-8 max-w-[90%] mx-auto min-h-screen py-10'>
         {loading ? (
           <LoadingSpinner />
         ) : error ? (
@@ -469,11 +463,16 @@ function App() {
               </div>
             )}
             <LocationMap location={locationData} formatTimestamp={formatTimestamp} path={path} />
+            <div className="flex flex-col gap-8 text-center">
+              <h1 className="font-bold text-white/80 text-7xl">
+                {config.APP_NAME}
+              </h1>
             <LocationInfo
               location={locationData}
               formatTimestamp={formatTimestamp}
               onOpenDateSearch={() => setIsDateSearchModalOpen(true)}
             />
+          </div>
           </>
         ) : (
           <div className="glassmorphism-strong min-w-[90%] mx-auto rounded-4xl p-8 text-center">
