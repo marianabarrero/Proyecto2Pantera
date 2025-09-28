@@ -402,16 +402,15 @@ function App() {
   };
 
   useEffect(() => {
-    // Iniciar la primera carga
-    fetchLatestLocation();
-
     let interval;
     if (isLiveMode) {
-      // Solo activar el polling si estamos en modo "en vivo"
+      // Cargar la ubicación más reciente solo al entrar en modo en vivo
+      fetchLatestLocation();
+      // Activar el polling (actualización automática)
       interval = setInterval(fetchLatestLocation, config.POLLING_INTERVAL);
     }
 
-    // Limpiar el intervalo cuando el componente se desmonte o cuando cambie el modo
+    // Esta función se ejecuta para limpiar el intervalo cuando el modo cambia
     return () => {
       if (interval) {
         clearInterval(interval);
