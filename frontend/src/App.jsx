@@ -241,8 +241,7 @@ const LocationInfo = ({ location, formatTimestamp, onOpenDateSearch }) => (
             <h3 className='text-l text-white rounded-xl inline-block'>Timestamp:</h3>
           </div>
           <div className="flex flex-col items-end">
-            <span className='text-white/80 font-mono'>{location.timestamp_value}</span>
-            <span className='text-white/50 text-sm'>{formatTimestamp(location.timestamp_value)}</span>
+            <span className='text-white/80 font-mono'>{formatTimestamp(location.timestamp_value)}</span>
           </div>
         </div>
       </div>
@@ -462,9 +461,11 @@ function App() {
                 </button>
               </div>
             )}
-            <LocationMap location={locationData} formatTimestamp={formatTimestamp} path={path} />
-            <div className="flex flex-col gap-8 text-center">
-              <h1 className="font-bold text-white/80 text-7xl">
+            <div className="animate-slide-in-left">
+              <LocationMap location={locationData} formatTimestamp={formatTimestamp} path={path} />
+            </div>
+            <div className="flex flex-col gap-8 text-center animate-slide-in-right">
+              <h1 className="font-bold text-white/80 text-7xl" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {config.APP_NAME}
               </h1>
             <LocationInfo
