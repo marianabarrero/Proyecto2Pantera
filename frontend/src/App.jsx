@@ -461,10 +461,10 @@ function App() {
                 </button>
               </div>
             )}
-            <div className="animate-slide-in-left interactive-glow rounded-4xl">
+            <div className="w-full md:w-3/4 animate-slide-in-left interactive-glow rounded-4xl">
               <LocationMap location={locationData} formatTimestamp={formatTimestamp} path={path} />
             </div>
-            <div className="flex flex-col gap-8 text-center animate-slide-in-right">
+            <div className="w-full md:w-1/4 flex flex-col gap-8 text-center animate-slide-in-right">
               <h1 className="font-bold text-7xl bg-gradient-to-r from-sky-400 to-cyan-300 text-transparent bg-clip-text" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {config.APP_NAME}
               </h1>
