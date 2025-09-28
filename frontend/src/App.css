@@ -361,3 +361,16 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover { /* <-- Y aquí tam
 .interactive-glow:hover {
   box-shadow: 0 0 25px rgba(56, 189, 248, 0.4); /* Un resplandor color sky-400 */
 }
+/* --- NUEVOS ESTILOS PARA EL FONDO ANIMADO --- */
+@keyframes gradient-animation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-gradient {
+  /* Usamos colores más profundos y acordes a tu paleta */
+  background: linear-gradient(-45deg, #0f172a, #1e293b, #075985, #0ea5e9);
+  background-size: 400% 400%;
+  animation: gradient-animation 15s ease infinite;
+}
