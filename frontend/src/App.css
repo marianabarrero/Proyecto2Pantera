@@ -335,7 +335,7 @@ body {
 /* Estilo para los íconos de calendario y reloj 🕒 */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator { /* <-- Se añade este selector */
-  filter: invert(1) brightness(0.9) sepia(1) saturate(5) hue-rotate(250deg);
+  filter: invert(48%) sepia(87%) saturate(1208%) hue-rotate(175deg) brightness(95%) contrast(92%);
   cursor: pointer;
   opacity: 0.8;
   transition: all 0.2s;
