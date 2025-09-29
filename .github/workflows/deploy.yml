@@ -42,9 +42,9 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i deploy_key ${USER}@${HOST} "
             cd /opt/location-tracker
 
-            # 1. Actualizar el código desde el repositorio
+            # 1. Actualizar el código desde el repositorio (forzando la actualización)
             echo '📦 Actualizando código desde Git...'
-            git pull origin main
+            git fetch origin main && git reset --hard origin/main
 
             # 2. Configurar y reiniciar el Backend Python
             echo '⚙️  Configurando Backend Python...'
