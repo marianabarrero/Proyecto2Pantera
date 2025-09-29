@@ -17,7 +17,7 @@ import './App.css';
 // --- Configuración Básica ---
 const config = {
   API_BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
-  APP_NAME: 'Panter',
+  APP_NAME: 'Pantera',
   APP_SUBTITLE: '',
   APP_VERSION: '2.0.0',
   POLLING_INTERVAL: import.meta.env.VITE_POLLING_INTERVAL || 5000,
@@ -82,6 +82,16 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
         styleOverrides: {
           root: {
             backgroundColor: 'rgba(13, 71, 161, 0.2)',
+          },
+        },
+      },
+      MuiDialogActions: {
+        styleOverrides: {
+          root: {
+            // Estilo para los botones dentro de las acciones del diálogo
+            '& .MuiButton-root': {
+              color: '#FFFFFF', // Color de texto blanco
+            },
           },
         },
       },
