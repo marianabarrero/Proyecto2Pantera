@@ -8,7 +8,7 @@ load_dotenv()
 class Database:
     def __init__(self):
         self.pool = None
-        
+
     async def init_connection_pool(self):
         """Inicializa el pool de conexiones"""
         self.pool = await asyncpg.create_pool(
@@ -20,13 +20,13 @@ class Database:
             ssl='require'
         )
         print("Pool de conexiones PostgreSQL inicializado")
-        
+
     async def close_connection_pool(self):
         """Cierra el pool de conexiones"""
         if self.pool:
             await self.pool.close()
             print("Pool de conexiones cerrado")
-            
+
     async def create_table(self):
         """Crea la tabla si no existe y añade la columna device_id si no existe"""
         async with self.pool.acquire() as connection:
@@ -44,7 +44,7 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
-            
+
             # Verificar y añadir la columna device_id si no existe
             # Esta es una forma segura de alterar la tabla en producción
             await connection.execute("""
@@ -52,7 +52,7 @@ class Database:
                 ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
             """)
             print("Tabla location_data verificada/creada y actualizada con device_id")
-            
+
     async def insert_location(self, data):
         """Inserta una nueva ubicación"""
         query = """
@@ -61,7 +61,7 @@ class Database:
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
         """
-        
+
         values = [
             data.get('lat'),
             data.get('lon'),
@@ -72,11 +72,11 @@ class Database:
             data.get('prov'),
             data.get('deviceId') # Obtener el nuevo campo
         ]
-        
+
         async with self.pool.acquire() as connection:
             record = await connection.fetchrow(query, *values)
             return record['id']
-            
+
     async def get_latest_location(self):
         """Obtiene la última ubicación"""
         query = """
@@ -85,11 +85,11 @@ class Database:
         ORDER BY id DESC
         LIMIT 1;
         """
-        
+
         async with self.pool.acquire() as connection:
             record = await connection.fetchrow(query)
             return dict(record) if record else None
-            
+
     async def get_all_locations(self, limit=100):
         """Obtiene todas las ubicaciones con límite"""
         query = """
@@ -97,11 +97,11 @@ class Database:
         ORDER BY id DESC
         LIMIT $1;
         """
-        
+
         async with self.pool.acquire() as connection:
             records = await connection.fetch(query, limit)
             return [dict(record) for record in records]
-            
+
     async def get_locations_by_range(self, start_time, end_time):
         """Obtiene ubicaciones por rango de fechas"""
 

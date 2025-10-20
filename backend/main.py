@@ -43,7 +43,7 @@ udp_protocol = None
 async def startup_event():
     """Eventos al iniciar la aplicación"""
     global udp_transport, udp_protocol
-    
+
     try:
         await db.init_connection_pool()
         await db.create_table()
@@ -97,14 +97,14 @@ async def get_location_range(
         # Ya no necesitamos un formato de texto a otro, las variables ya son objetos datetime.
         start_time = int(startDate.timestamp() * 1000)
         end_time = int(endDate.timestamp() * 1000)
-        
+
         results = await db.get_locations_by_range(start_time, end_time)
         return [LocationResponse(**result) for result in results]
-        
+
     except Exception as e:
         print(f"Error obteniendo registros por rango: {e}")
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail="Error interno del servidor"
         )
 
