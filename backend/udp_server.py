@@ -28,10 +28,11 @@ class UDPServer:
         try:
             # Parsear el mensaje JSON
             message = json.loads(data.decode())
-            
+            # Imprime el contenido completo del JSON recibido
+            print(f"Datos recibidos: {message}")
             # Insertar en la base de datos
             location_id = await db.insert_location(message)
-            print(f"Datos insertados: {location_id}")
+            print(f"Datos insertados en la base de datos con ID: {location_id}")
             
         except json.JSONDecodeError as e:
             print(f"Error parseando JSON: {e}")
