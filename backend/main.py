@@ -62,12 +62,13 @@ async def shutdown_event():
     await db.close_connection_pool()
 
 @app.get("/api/location/latest", response_model=LocationResponse)
-async def get_latest_location():
-    """Endpoint para obtener el último registro"""
+async def get_latest_location(user_id: str = Query(..., description="ID del usuario")):
+    """Endpoint para obtener el último registro de un usuario"""
     try:
-        result = await db.get_latest_location()
+        # Pasa el user_id a la función de la base de datos
+        result = await db.get_latest_location(user_id)
         if not result:
-            raise HTTPException(status_code=404, detail="No hay datos disponibles")
+            raise HTTPException(status_code=404, detail="No hay datos disponibles para este usuario")
         return LocationResponse(**result)
     except HTTPException:
         raise
@@ -87,24 +88,23 @@ async def get_all_locations(limit: int = Query(default=100, ge=1, le=1000)):
 
 # --- FUNCIÓN CORREGIDA Y SIMPLIFICADA ---
 @app.get("/api/location/range", response_model=list[LocationResponse])
-async def get_location_range(
-    # Cambiamos 'str' por 'datetime'. FastAPI se encargará de la conversión.
+async def get_location_range(user_id: str = Query(..., description="ID del usuario"), # Añade user_id
     startDate: datetime = Query(..., description="Fecha de inicio en formato ISO 8601"),
     endDate: datetime = Query(..., description="Fecha de fin en formato ISO 8601")
 ):
-    """Endpoint para obtener registros por rango de fechas"""
+    """Endpoint para obtener registros por rango de fechas para un usuario específico"""
     try:
         # Ya no necesitamos un formato de texto a otro, las variables ya son objetos datetime.
         start_time = int(startDate.timestamp() * 1000)
         end_time = int(endDate.timestamp() * 1000)
         
-        results = await db.get_locations_by_range(start_time, end_time)
+        results = await db.get_locations_by_range(user_id, start_time, end_time)
         return [LocationResponse(**result) for result in results]
         
     except Exception as e:
         print(f"Error obteniendo registros por rango: {e}")
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail="Error interno del servidor"
         )
 

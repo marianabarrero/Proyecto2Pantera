@@ -32,6 +32,7 @@ class Database:
         query = """
         CREATE TABLE IF NOT EXISTS location_data (
             id SERIAL PRIMARY KEY,
+            user_id VARCHAR(50) NOT NULL,
             latitude DECIMAL(10, 8) NOT NULL,
             longitude DECIMAL(11, 8) NOT NULL,
             timestamp_value BIGINT NOT NULL,
@@ -51,12 +52,13 @@ class Database:
         """Inserta una nueva ubicación"""
         query = """
         INSERT INTO location_data
-        (latitude, longitude, timestamp_value, accuracy, altitude, speed, provider)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (user_id, latitude, longitude, timestamp_value, accuracy, altitude, speed, provider)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
         """
         
         values = [
+            data.get('user_id'),
             data.get('lat'),
             data.get('lon'),
             data.get('time'),
@@ -70,17 +72,18 @@ class Database:
             record = await connection.fetchrow(query, *values)
             return record['id']
             
-    async def get_latest_location(self):
-        """Obtiene la última ubicación"""
+    async def get_latest_location(self, user_id: str):
+        """Obtiene la última ubicación de un usuario específico"""
         query = """
         SELECT latitude, longitude, timestamp_value, created_at
         FROM location_data
+        WHERE user_id = $1
         ORDER BY id DESC
         LIMIT 1;
         """
         
         async with self.pool.acquire() as connection:
-            record = await connection.fetchrow(query)
+            record = await connection.fetchrow(query, user_id)
             return dict(record) if record else None
             
     async def get_all_locations(self, limit=100):
@@ -94,20 +97,20 @@ class Database:
         async with self.pool.acquire() as connection:
             records = await connection.fetch(query, limit)
             return [dict(record) for record in records]
-            
-    async def get_locations_by_range(self, start_time, end_time):
+
+    async def get_locations_by_range(self, user_id: str, start_time, end_time):
         """Obtiene ubicaciones por rango de fechas"""
 
         # Se añade created_at a la consulta para evitar el error de validación
         query = """
         SELECT latitude, longitude, timestamp_value, created_at
         FROM location_data
-        WHERE timestamp_value >= $1 AND timestamp_value <= $2
+        WHERE user_id = $1 AND timestamp_value >= $2 AND timestamp_value <= $3 -- Filtra por user_id
         ORDER BY timestamp_value ASC;
         """
         
         async with self.pool.acquire() as connection:
-            records = await connection.fetch(query, start_time, end_time)
+            records = await connection.fetch(query, user_id, start_time, end_time)
             return [dict(record) for record in records]
 
 # Instancia global de la base de datos
