@@ -20,14 +20,12 @@
             border-radius: 1rem;
             z-index: 10; /* Asegura que el mapa esté por encima del fondo */
         }
-
         body {
             font-family: "Poppins", sans-serif;
             overflow-x: hidden;
             scroll-behavior: smooth;
             background-color: #0f172a; /* Fondo base oscuro */
         }
-
         .glassmorphism-strong {
             background: rgba(15, 23, 42, 0.6); /* Fondo semi-transparente más oscuro */
             backdrop-filter: blur(15px);
@@ -35,7 +33,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1); /* Borde sutil */
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
         .button-hover {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -43,7 +40,6 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
-
         @keyframes gradient-animation {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -57,7 +53,6 @@
             background-size: 400% 400%;
             animation: gradient-animation 25s ease infinite; /* Más lento */
         }
-        
         @keyframes spin { to { transform: rotate(360deg); } }
         .loading-spinner {
             width: 50px; height: 50px;
@@ -66,8 +61,6 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-
-        /* Estilos Date Time Local */
         input[type="datetime-local"] {
             background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.15);
@@ -76,11 +69,9 @@
         input[type="datetime-local"]::-webkit-calendar-picker-indicator {
             filter: invert(1) brightness(1.5); cursor: pointer;
         }
-
-        /* Estilos personalizados para popups de Leaflet */
         .leaflet-popup-content-wrapper {
-            background-color: rgba(15, 23, 42, 0.8) !important; /* Fondo oscuro semi-transparente */
-            color: #e2e8f0 !important; /* Texto claro (slate-200) */
+            background-color: rgba(15, 23, 42, 0.8) !important;
+            color: #e2e8f0 !important;
             border-radius: 8px !important;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
             backdrop-filter: blur(5px);
@@ -90,13 +81,11 @@
             background-color: rgba(15, 23, 42, 0.8) !important;
         }
         .leaflet-popup-content strong {
-            color: #67e8f9; /* Color cyan-300 para resaltar */
+            color: #67e8f9;
         }
         .leaflet-popup-content small {
-            color: #94a3b8; /* Color slate-400 para detalles */
+            color: #94a3b8;
         }
-
-        /* Iconos de colores */
         .marker-icon-red { filter: hue-rotate(0deg) saturate(1.5); }
         .marker-icon-blue { filter: hue-rotate(180deg) saturate(1.5); }
         .marker-icon-green { filter: hue-rotate(90deg) saturate(1.5); }
@@ -105,72 +94,70 @@
         .marker-icon-cyan { filter: hue-rotate(150deg) saturate(1.5); }
         .marker-icon-yellow { filter: hue-rotate(60deg) saturate(2); }
         .marker-icon-pink { filter: hue-rotate(300deg) saturate(1.5); }
-
     </style>
 </head>
 <body class="text-slate-200">
     <div id="root"></div>
 
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
-    <script src="https://unpkg.com/react-leaflet/dist/react-leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-leaflet/4.2.1/react-leaflet.min.js" integrity="sha512-GBlRcxH2/C1aL1CHJtLzrhQo6P/fS5B7jG/TjgaogqYJbIwFgoe/HiJ9/1oHhshgW1JbQ5hgP28Yf2D/iir1gA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useCallback, useRef } = React;
-        const { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } = ReactLeaflet;
+        // **CAMBIO AQUÍ**: Aseguramos que las variables de React y ReactLeaflet se tomen de 'window'
+        const { useState, useEffect, useMemo, useCallback, useRef } = window.React;
+        const { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } = window.ReactLeaflet;
 
         // --- Configuración Básica ---
         const config = {
-          API_BASE_URL: 'https://panteratracker.tech', // Asegúrate que sea HTTPS si tu sitio lo es
+          API_BASE_URL: 'https://panteratracker.tech', 
           APP_NAME: 'Pantera Tracker',
-          APP_VERSION: '4.0.0', // Nueva versión con multi-dispositivo
-          POLLING_INTERVAL: 8000, // Intervalo de actualización en ms
-          DEVICE_ACTIVITY_THRESHOLD_MINUTES: 60, // Considerar activo si envió datos en la última hora
+          APP_VERSION: '4.0.1', // Nueva versión con corrección
+          POLLING_INTERVAL: 8000, 
+          DEVICE_ACTIVITY_THRESHOLD_MINUTES: 60,
         };
 
         // --- Colores e Iconos ---
         const deviceColors = [
-            '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#06b6d4', '#eab308', '#ec4899' // Rojo, Azul, Verde, Morado, Naranja, Cyan, Amarillo, Rosa
+            '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#06b6d4', '#eab308', '#ec4899'
         ];
         const iconClasses = [
             'marker-icon-red', 'marker-icon-blue', 'marker-icon-green', 'marker-icon-purple',
             'marker-icon-orange', 'marker-icon-cyan', 'marker-icon-yellow', 'marker-icon-pink'
         ];
 
-        // Función para asignar un color/icono basado en el deviceId
         const getDeviceStyle = (deviceId, deviceStylesRef) => {
             if (!deviceStylesRef.current[deviceId]) {
                 const index = Object.keys(deviceStylesRef.current).length % deviceColors.length;
                 deviceStylesRef.current[deviceId] = {
                     color: deviceColors[index],
                     iconClass: iconClasses[index],
-                    iconUrl: `https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png`, // Icono base
+                    iconUrl: `https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png`, // Usar icono base más simple
                 };
             }
             return deviceStylesRef.current[deviceId];
         };
 
-        // --- Componentes UI (Loading, Error, DateModal sin cambios) ---
-        const LoadingSpinner = () => ( /* ... (sin cambios) ... */ <div className="flex flex-col items-center justify-center p-8 text-white"><div className="loading-spinner"></div><p className="mt-4">Cargando datos...</p></div> );
-        const ErrorMessage = ({ error, onRetry, retryText = "Reintentar" }) => ( /* ... (sin cambios) ... */ <div className="glassmorphism-strong mt-10 rounded-2xl w-full max-w-md mx-auto p-8 text-center"><div className="text-red-400 mb-4"><h3 className="text-xl font-bold">Atención</h3></div><p className="text-white/70 mb-4">{error}</p>{onRetry && (<button onClick={onRetry} className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-colors">{retryText}</button>)}</div> );
-        const DateSearchModal = ({ isOpen, onClose, onSearch, selectedDeviceId }) => { /* ... (adaptado para datetime-local) ... */ const [startDate, setStartDate] = useState('');const [endDate, setEndDate] = useState('');const [isLoading, setIsLoading] = useState(false);const [error, setError] = useState(''); const handleSearch = async () => { if (!startDate || !endDate) {setError('Por favor selecciona una fecha de inicio y de fin.'); return;} if (new Date(endDate) < new Date(startDate)) {setError('La fecha de fin debe ser posterior a la de inicio.'); return;} setError(''); setIsLoading(true); try { await onSearch({ startDate: new Date(startDate).toISOString(), endDate: new Date(endDate).toISOString(), deviceId: selectedDeviceId }); onClose(); } catch (err) { setError(err.message || 'Error inesperado.'); } finally { setIsLoading(false); } }; const resetForm = () => { setStartDate(''); setEndDate(''); setError(''); }; useEffect(() => { if (!isOpen) resetForm(); }, [isOpen]); if (!isOpen) return null; return ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} /><div className="relative glassmorphism-strong rounded-2xl p-6 md:p-8 mx-4 w-full max-w-md transform"><h2 className="text-xl md:text-2xl font-bold text-white mb-6">Seleccionar Rango de Fechas{selectedDeviceId && <span className="text-sm font-normal text-slate-400 block"> para Disp. {selectedDeviceId.substring(0,6)}...</span>}</h2><div className="space-y-4"><div><label htmlFor="startDate" className="block text-sm font-medium text-gray-300 mb-1">Fecha de Inicio</label><input type="datetime-local" id="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} max={new Date().toISOString().slice(0, 16)} /></div><div><label htmlFor="endDate" className="block text-sm font-medium text-gray-300 mb-1">Fecha de Fin</label><input type="datetime-local" id="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} min={startDate} disabled={!startDate} max={new Date().toISOString().slice(0, 16)} /></div></div>{error && <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-xl">{error}</div>}<div className="flex gap-4 pt-6 mt-4 border-t border-white/20"><button onClick={resetForm} disabled={isLoading} className="flex-1 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium text-sm md:text-base">Limpiar</button><button onClick={handleSearch} disabled={isLoading || !startDate || !endDate} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white rounded-xl transition-all font-medium disabled:opacity-50 text-sm md:text-base">{isLoading ? 'Buscando...' : 'Buscar Historial'}</button></div></div></div> ); };
+        // --- Componentes UI ---
+        const LoadingSpinner = () => ( <div className="flex flex-col items-center justify-center p-8 text-white"><div className="loading-spinner"></div><p className="mt-4">Cargando datos...</p></div> );
+        const ErrorMessage = ({ error, onRetry, retryText = "Reintentar" }) => ( <div className="glassmorphism-strong mt-10 rounded-2xl w-full max-w-md mx-auto p-8 text-center"><div className="text-red-400 mb-4"><h3 className="text-xl font-bold">Atención</h3></div><p className="text-white/70 mb-4">{error}</p>{onRetry && (<button onClick={onRetry} className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-colors">{retryText}</button>)}</div> );
+        const DateSearchModal = ({ isOpen, onClose, onSearch, selectedDeviceId }) => { const [startDate, setStartDate] = useState('');const [endDate, setEndDate] = useState('');const [isLoading, setIsLoading] = useState(false);const [error, setError] = useState(''); const handleSearch = async () => { if (!startDate || !endDate) {setError('Por favor selecciona una fecha de inicio y de fin.'); return;} if (new Date(endDate) < new Date(startDate)) {setError('La fecha de fin debe ser posterior a la de inicio.'); return;} setError(''); setIsLoading(true); try { await onSearch({ startDate: new Date(startDate).toISOString(), endDate: new Date(endDate).toISOString(), deviceId: selectedDeviceId }); onClose(); } catch (err) { setError(err.message || 'Error inesperado.'); } finally { setIsLoading(false); } }; const resetForm = () => { setStartDate(''); setEndDate(''); setError(''); }; useEffect(() => { if (!isOpen) resetForm(); }, [isOpen]); if (!isOpen) return null; return ( <div className="fixed inset-0 z-50 flex items-center justify-center p-4"><div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} /><div className="relative glassmorphism-strong rounded-2xl p-6 md:p-8 mx-4 w-full max-w-md transform"><h2 className="text-xl md:text-2xl font-bold text-white mb-6">Seleccionar Rango de Fechas{selectedDeviceId && <span className="text-sm font-normal text-slate-400 block"> para Disp. {selectedDeviceId.substring(0,6)}...</span>}</h2><div className="space-y-4"><div><label htmlFor="startDate" className="block text-sm font-medium text-gray-300 mb-1">Fecha de Inicio</label><input type="datetime-local" id="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} max={new Date().toISOString().slice(0, 16)} /></div><div><label htmlFor="endDate" className="block text-sm font-medium text-gray-300 mb-1">Fecha de Fin</label><input type="datetime-local" id="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} min={startDate} disabled={!startDate} max={new Date().toISOString().slice(0, 16)} /></div></div>{error && <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-xl">{error}</div>}<div className="flex gap-4 pt-6 mt-4 border-t border-white/20"><button onClick={resetForm} disabled={isLoading} className="flex-1 px-4 py-2 md:px-6 md:py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium text-sm md:text-base">Limpiar</button><button onClick={handleSearch} disabled={isLoading || !startDate || !endDate} className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white rounded-xl transition-all font-medium disabled:opacity-50 text-sm md:text-base">{isLoading ? 'Buscando...' : 'Buscar Historial'}</button></div></div></div> ); };
 
         // --- Componente de Información Lateral ---
         const DeviceInfoPanel = ({ devices, formatTimestamp, onOpenDateSearch, selectedDevice, onSelectDevice }) => (
             <div className='flex flex-col p-6 rounded-2xl glassmorphism-strong w-full h-full'>
                 <h2 className='text-2xl font-bold text-white text-center mb-4'>Dispositivos Activos</h2>
                 
-                {/* Selector */}
                 <select
                     value={selectedDevice || 'all'}
                     onChange={(e) => onSelectDevice(e.target.value === 'all' ? null : e.target.value)}
                     className="w-full p-3 mb-4 bg-slate-800/60 border border-slate-700 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 transition text-sm"
                 >
-                    <option value="all">Ver Todos</option>
+                    <option value="all">Ver Todos ({Object.keys(devices).length})</option>
                     {Object.keys(devices).sort().map(deviceId => (
                         <option key={deviceId} value={deviceId}>
                             Disp: {deviceId.substring(0, 8)}...
@@ -178,10 +165,8 @@
                     ))}
                 </select>
 
-                {/* Lista/Detalle */}
                 <div className="flex-grow overflow-y-auto space-y-3 pr-2">
                     {selectedDevice && devices[selectedDevice] ? (
-                        // Vista Detallada
                         <div key={selectedDevice} className="p-3 bg-slate-800/40 rounded-lg border border-sky-700">
                              <h3 className="text-lg font-semibold text-sky-400 mb-2">Disp: {selectedDevice.substring(0, 8)}...</h3>
                              <InfoRow label="Latitud" value={parseFloat(devices[selectedDevice].latitude).toFixed(6)} isMono={true} />
@@ -195,10 +180,9 @@
                             </button>
                         </div>
                     ) : (
-                        // Vista Lista (o si no hay selección)
                         Object.entries(devices).length > 0 ? (
                              Object.entries(devices)
-                             .sort(([, a], [, b]) => b.timestamp_value - a.timestamp_value) // Ordenar por más reciente
+                             .sort(([, a], [, b]) => b.timestamp_value - a.timestamp_value) 
                              .map(([deviceId, location]) => (
                                 <div key={deviceId} className="p-3 bg-slate-800/40 rounded-lg cursor-pointer hover:bg-slate-700/50" onClick={() => onSelectDevice(deviceId)}>
                                     <h3 className="text-base font-semibold text-sky-400 mb-1 truncate">Disp: {deviceId.substring(0, 8)}...</h3>
@@ -224,10 +208,9 @@
         // --- Componente del Mapa Modificado ---
         const LocationMap = ({ devices, formatTimestamp, devicePaths, deviceStylesRef, selectedDevice }) => {
             const mapRef = useRef();
-            const [mapCenter, setMapCenter] = useState([4.6097, -74.0817]); // Centro inicial (Bogotá como ejemplo)
+            const [mapCenter, setMapCenter] = useState([4.6097, -74.0817]);
             const [mapZoom, setMapZoom] = useState(5);
 
-            // Centrar mapa cuando cambia la selección o los datos
             useEffect(() => {
                 const map = mapRef.current;
                 if (!map) return;
@@ -235,37 +218,32 @@
                 const activeDevices = Object.values(devices);
 
                 if (selectedDevice && devices[selectedDevice]) {
-                    // Centrar en el dispositivo seleccionado
                     const pos = [parseFloat(devices[selectedDevice].latitude), parseFloat(devices[selectedDevice].longitude)];
-                    map.flyTo(pos, 16, { duration: 1 }); // Zoom más cercano para uno solo
-                    setMapCenter(pos); // Actualizar estado por si acaso
+                    map.flyTo(pos, 16, { duration: 1 });
+                    setMapCenter(pos);
                     setMapZoom(16);
                 } else if (activeDevices.length > 0) {
-                     // Centrar y ajustar zoom para mostrar todos los marcadores visibles
                     const bounds = L.latLngBounds(activeDevices.map(d => [parseFloat(d.latitude), parseFloat(d.longitude)]));
                     if (bounds.isValid()) {
                        map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
-                       // No actualizamos el estado center/zoom aquí para evitar bucles si flyToBounds falla
                     }
                 } else {
-                    // Si no hay dispositivos, volver a la vista inicial
                     map.flyTo([4.6097, -74.0817], 5, { duration: 1 });
                     setMapCenter([4.6097, -74.0817]);
                     setMapZoom(5);
                 }
-            }, [devices, selectedDevice]); // Depende de los dispositivos y la selección
+            }, [devices, selectedDevice]); 
 
-            // Función para crear iconos con clases CSS
             const createDeviceIcon = (deviceId) => {
                  const style = getDeviceStyle(deviceId, deviceStylesRef);
                  return L.icon({
                     iconUrl: style.iconUrl,
-                    iconSize: [25, 41], // Tamaño estándar de Leaflet
+                    iconSize: [25, 41],
                     iconAnchor: [12, 41],
                     popupAnchor: [1, -34],
                     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
                     shadowSize: [41, 41],
-                    className: style.iconClass // ¡Importante! Aplica la clase CSS para el filtro de color
+                    className: style.iconClass 
                  });
             };
 
@@ -274,7 +252,7 @@
                   <MapContainer
                     center={mapCenter}
                     zoom={mapZoom}
-                    style={{ height: '100%', width: '100%', borderRadius: '0.75rem' }} // Ajustado border radius
+                    style={{ height: '100%', width: '100%', borderRadius: '0.75rem' }}
                     ref={mapRef}
                   >
                     <TileLayer
@@ -282,9 +260,7 @@
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
                     
-                    {/* Mapear dispositivos para marcadores y polilíneas */}
                     {Object.entries(devices).map(([deviceId, location]) => {
-                         // Mostrar solo el seleccionado o todos si no hay selección
                          if(selectedDevice === null || selectedDevice === deviceId) {
                             const position = [parseFloat(location.latitude), parseFloat(location.longitude)];
                             const style = getDeviceStyle(deviceId, deviceStylesRef);
@@ -306,7 +282,7 @@
                                 </React.Fragment>
                              );
                          }
-                         return null; // No mostrar si no está seleccionado y hay una selección activa
+                         return null;
                     })}
                   </MapContainer>
                 </div>
@@ -315,20 +291,16 @@
         
         // --- Componente Principal APP Modificado ---
         function App() {
-          // Estado para almacenar la última ubicación de CADA dispositivo activo
           const [activeDevices, setActiveDevices] = useState({});
-          // Estado para almacenar las rutas (historiales) de cada dispositivo
           const [devicePaths, setDevicePaths] = useState({});
           const [loading, setLoading] = useState(true);
           const [error, setError] = useState(null);
           const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
-          const [selectedDevice, setSelectedDevice] = useState(null); // null para ver todos, deviceId para uno específico
-          const [searchRangeData, setSearchRangeData] = useState(null); // Para guardar los datos de búsqueda por rango
+          const [selectedDevice, setSelectedDevice] = useState(null);
+          const [searchRangeData, setSearchRangeData] = useState(null);
 
-          // Ref para almacenar los estilos asignados a cada deviceId
           const deviceStylesRef = useRef({});
 
-          // Función para obtener los dispositivos activos
           const fetchActiveDevices = useCallback(async () => {
             setError(null);
             try {
@@ -339,7 +311,6 @@
               const data = await response.json();
               setActiveDevices(data);
 
-              // Actualizar rutas solo para los dispositivos que acaban de reportar
               setDevicePaths(prevPaths => {
                   const newPaths = { ...prevPaths };
                   Object.entries(data).forEach(([deviceId, location]) => {
@@ -347,18 +318,14 @@
                       const currentPath = newPaths[deviceId] || [];
                       const lastPoint = currentPath[currentPath.length - 1];
 
-                      // Añadir punto solo si es diferente al último
                       if (!lastPoint || lastPoint[0] !== newPosition[0] || lastPoint[1] !== newPosition[1]) {
-                           // Limitar la longitud de la ruta para no sobrecargar
-                          const updatedPath = [...currentPath, newPosition].slice(-100); // Guardar últimos 100 puntos
+                          const updatedPath = [...currentPath, newPosition].slice(-100); 
                           newPaths[deviceId] = updatedPath;
                       }
                   });
-                   // Opcional: Limpiar rutas de dispositivos inactivos (si es necesario)
                   const activeIds = Object.keys(data);
                   Object.keys(newPaths).forEach(id => {
                       if (!activeIds.includes(id)) {
-                          // delete newPaths[id]; // Descomentar si quieres limpiar historial de inactivos
                       }
                   });
                   return newPaths;
@@ -372,23 +339,21 @@
             }
           }, []);
 
-          // Hook para el polling (actualización automática)
           useEffect(() => {
-            fetchActiveDevices(); // Carga inicial
+            fetchActiveDevices();
             const interval = setInterval(fetchActiveDevices, config.POLLING_INTERVAL);
-            return () => clearInterval(interval); // Limpiar intervalo al desmontar
+            return () => clearInterval(interval);
           }, [fetchActiveDevices]);
 
-          // Función para manejar la búsqueda por rango de fechas
           const handleDateSearch = async (searchParams) => {
             setLoading(true);
             setError(null);
-            setSearchRangeData(null); // Limpiar datos anteriores
-            setSelectedDevice(searchParams.deviceId); // Asegura que estemos viendo el dispositivo correcto
+            setSearchRangeData(null);
+            setSelectedDevice(searchParams.deviceId); 
 
             try {
               const { startDate, endDate, deviceId } = searchParams;
-              const deviceQuery = deviceId ? `&deviceId=${deviceId}` : ''; // Incluir deviceId si existe
+              const deviceQuery = deviceId ? `&deviceId=${deviceId}` : '';
               const url = `${config.API_BASE_URL}/api/location/range?startDate=${startDate}&endDate=${endDate}${deviceQuery}`;
               const response = await fetch(url);
 
@@ -399,15 +364,13 @@
               const historicalData = await response.json();
 
               if (historicalData.length > 0) {
-                 // Agrupar por deviceId si no se filtró uno específico
                  const pathsInRange = {};
                  historicalData.forEach(point => {
                      const id = point.device_id;
                      if (!pathsInRange[id]) pathsInRange[id] = [];
                      pathsInRange[id].push([parseFloat(point.latitude), parseFloat(point.longitude)]);
                  });
-                 setSearchRangeData(pathsInRange); // Guardamos las rutas del rango
-                  // Actualizamos activeDevices con la última posición del rango para centrar bien
+                 setSearchRangeData(pathsInRange);
                  const lastLocationsInRange = {};
                  Object.keys(pathsInRange).forEach(id => {
                      const deviceData = historicalData.filter(p => p.device_id === id);
@@ -418,8 +381,8 @@
                  setActiveDevices(lastLocationsInRange);
 
               } else {
-                 setSearchRangeData({}); // Objeto vacío si no hay resultados
-                 setActiveDevices(prev => selectedDevice ? ({...prev, [selectedDevice]: null}) : ({})); // Limpiar o poner a null
+                 setSearchRangeData({});
+                 setActiveDevices(prev => selectedDevice ? ({...prev, [selectedDevice]: null}) : ({}));
                  setError('No se encontraron datos para el rango y dispositivo seleccionados.');
               }
             } catch (err) {
@@ -430,25 +393,21 @@
             }
           };
 
-          // Función para volver al modo Live
           const returnToLiveMode = () => {
-              setSearchRangeData(null); // Limpiar datos de rango
-              setSelectedDevice(null); // Ver todos
-              setLoading(true); // Mostrar spinner mientras carga
-              fetchActiveDevices(); // Recargar datos en vivo
+              setSearchRangeData(null);
+              setSelectedDevice(null);
+              setLoading(true);
+              fetchActiveDevices();
           };
 
+          const formatTimestamp = (timestamp) => { if (!timestamp) return 'N/A'; const date = new Date(parseInt(timestamp)); return date.toLocaleString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }); };
 
-          const formatTimestamp = (timestamp) => { /* ... (sin cambios) ... */ if (!timestamp) return 'N/A'; const date = new Date(parseInt(timestamp)); return date.toLocaleString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }); };
-
-          // Determinar qué rutas mostrar: las del rango buscado o las acumuladas en vivo
           const pathsToShow = searchRangeData !== null ? searchRangeData : devicePaths;
 
           return (
             <div className="min-h-screen flex flex-col">
-                <div className="animated-gradient-bg"></div> {/* Fondo animado */}
+                <div className="animated-gradient-bg"></div>
 
-                {/* Header */}
                 <header className="py-4 px-6 md:px-10 glassmorphism-strong shadow-md sticky top-0 z-20">
                     <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-sky-400 to-cyan-300 text-transparent bg-clip-text text-center md:text-left">
                         {config.APP_NAME}
@@ -456,8 +415,7 @@
                 </header>
 
                 <main className='flex-grow flex flex-col md:flex-row gap-4 md:gap-6 p-4 md:p-6 max-w-[1600px] w-full mx-auto'>
-                    {/* Panel Lateral */}
-                    <div className="w-full md:w-1/4 h-[300px] md:h-auto md:max-h-[calc(100vh-100px)]"> {/* Altura ajustada */}
+                    <div className="w-full md:w-1/4 h-[300px] md:h-auto md:max-h-[calc(100vh-100px)]">
                        {loading && Object.keys(activeDevices).length === 0 ? (
                            <div className="h-full flex items-center justify-center"><LoadingSpinner/></div>
                        ) : error && Object.keys(activeDevices).length === 0 ? (
@@ -473,8 +431,7 @@
                        )}
                     </div>
                     
-                    {/* Mapa Principal */}
-                    <div className="w-full md:w-3/4 h-[500px] md:h-auto md:max-h-[calc(100vh-100px)]"> {/* Altura ajustada */}
+                    <div className="w-full md:w-3/4 h-[500px] md:h-auto md:max-h-[calc(100vh-100px)]">
                       {loading && Object.keys(activeDevices).length === 0 ? (
                             <div className="h-full flex items-center justify-center glassmorphism-strong rounded-2xl"><LoadingSpinner/></div>
                        ) : !loading && Object.keys(activeDevices).length === 0 && !error ? (
@@ -497,7 +454,6 @@
                     </div>
                 </main>
 
-                {/* Botón Volver a Live (solo si estamos en modo historial) */}
                  {searchRangeData !== null && (
                     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30">
                         <button
@@ -514,13 +470,15 @@
                   isOpen={isDateSearchModalOpen}
                   onClose={() => setIsDateSearchModalOpen(false)}
                   onSearch={handleDateSearch}
-                  selectedDeviceId={selectedDevice} // Pasar el ID seleccionado al modal
+                  selectedDeviceId={selectedDevice}
                 />
             </div>
           );
         }
-
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+        
+        // **CAMBIO AQUÍ**: Usamos ReactDOM.createRoot
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 
 </body>
