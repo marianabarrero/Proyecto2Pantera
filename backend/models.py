@@ -8,6 +8,7 @@ class LocationData(BaseModel):
     longitude: float
     timestamp_value: int
     created_at: Optional[datetime] = None
+    device_id: Optional[str] = None # Añadido
 
 class LocationResponse(BaseModel):
     """Respuesta para ubicación"""
@@ -15,6 +16,7 @@ class LocationResponse(BaseModel):
     longitude: float
     timestamp_value: int
     created_at: datetime
+    device_id: Optional[str] = None # Añadido
 
 class AllLocationsResponse(BaseModel):
     """Respuesta para todas las ubicaciones"""
@@ -27,6 +29,7 @@ class AllLocationsResponse(BaseModel):
     speed: Optional[float] = None
     provider: Optional[str] = None
     created_at: datetime
+    device_id: Optional[str] = None # Añadido
 
 class HealthResponse(BaseModel):
     """Respuesta del health check"""

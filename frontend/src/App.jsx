@@ -227,6 +227,14 @@ const LocationInfo = ({ location, formatTimestamp, onOpenDateSearch }) => (
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong '>
       <div className=' rounded-4xl h-auto'>
         <h2 className='text-2xl font-bold text-white text-center rounded-4xl mb-8'>Last Location </h2>
+        <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
+          <div className='flex flex-row gap-2 justify-left'>
+            <h3 className='text-l text-white rounded-xl inline-block'>Device ID:</h3>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className='text-white/80 font-mono text-xs'>{location.device_id || 'N/A'}</span>
+          </div>
+        </div>
 
         <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
           <div className='flex flex-row gap-2 justify-left'>
@@ -303,8 +311,8 @@ const LocationMap = ({ location, formatTimestamp, path }) => {
         <Marker position={position} icon={customIcon}>
           <Popup>
             <div className="text-center">
-              <strong>Ubicación actual</strong><br />
-              <small>Recibida: {formatTimestamp(location.timestamp_value)}</small><br />
+              <strong>{location.device_id || 'Current Location'}</strong><br />
+              <small>Received: {formatTimestamp(location.timestamp_value)}</small><br />
               <small>Lat: {parseFloat(location.latitude).toFixed(6)}</small><br />
               <small>Lng: {parseFloat(location.longitude).toFixed(6)}</small>
             </div>
