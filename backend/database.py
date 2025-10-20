@@ -86,7 +86,7 @@ class Database:
             record = await connection.fetchrow(query, user_id)
             return dict(record) if record else None
             
-    async def get_all_locations(self, limit=100):
+    async def get_all_locations(self):
         """Obtiene todas las ubicaciones con límite"""
         query = """
         SELECT * FROM location_data
@@ -97,6 +97,7 @@ class Database:
         async with self.pool.acquire() as connection:
             records = await connection.fetch(query, limit)
             return [dict(record) for record in records]
+    
 
     async def get_locations_by_range(self, user_id: str, start_time, end_time):
         """Obtiene ubicaciones por rango de fechas"""
@@ -112,6 +113,18 @@ class Database:
         async with self.pool.acquire() as connection:
             records = await connection.fetch(query, user_id, start_time, end_time)
             return [dict(record) for record in records]
+
+        async def get_all_latest_locations(self):
+            """Obtiene la última ubicación de cada usuario."""
+            query = """
+            SELECT DISTINCT ON (user_id)
+                user_id, latitude, longitude, timestamp_value, created_at
+            FROM location_data
+            ORDER BY user_id, id DESC;
+            """
+            async with self.pool.acquire() as connection:
+                records = await connection.fetch(query)
+                return [dict(record) for record in records]
 
 # Instancia global de la base de datos
 db = Database()

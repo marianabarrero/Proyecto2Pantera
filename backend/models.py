@@ -11,6 +11,7 @@ class LocationData(BaseModel):
 
 class LocationResponse(BaseModel):
     """Respuesta para ubicación"""
+    user_id: str
     latitude: float
     longitude: float
     timestamp_value: int

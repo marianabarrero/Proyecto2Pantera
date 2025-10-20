@@ -107,6 +107,17 @@ async def get_location_range(user_id: str = Query(..., description="ID del usuar
             status_code=500,
             detail="Error interno del servidor"
         )
+@app.get("/api/location/latest/all", response_model=list[LocationResponse])
+async def get_all_latest_locations():
+    """Endpoint para obtener el último registro de todos los usuarios"""
+    try:
+        results = await db.get_all_latest_locations()
+        if not results:
+            raise HTTPException(status_code=404, detail="No hay datos disponibles")
+        return [LocationResponse(**result) for result in results]
+    except Exception as e:
+        print(f"Error obteniendo los últimos registros de todos los usuarios: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @app.get("/api/health", response_model=HealthResponse)
 async def health_check():
