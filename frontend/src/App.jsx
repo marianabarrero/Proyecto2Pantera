@@ -325,10 +325,16 @@ function App() {
   const [path, setPath] = useState([]);
   const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(true);
+  const [currentUser, setCurrentUser] = useState('user_1'); // 'user_1' o 'user_2'
+  const [users, setUsers] = useState({
+    user_1: { name: 'Usuario 1', color: '#110394' },
+    user_2: { name: 'Usuario 2', color: '#940311' }
+  });
 
   const fetchLatestLocation = async () => {
     try {
-      const response = await fetch(`${config.API_BASE_URL}/api/location/latest`);
+      const response = await fetch(`${config.API_BASE_URL}/api/location/latest?user_id=${currentUser}`);
+
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -371,7 +377,7 @@ function App() {
     try {
       const { startDate, endDate } = searchData;
       // Construimos la URL con los parámetros de fecha
-      const response = await fetch(`${config.API_BASE_URL}/api/location/range?startDate=${startDate}&endDate=${endDate}`);
+      const response = await fetch(`${config.API_BASE_URL}/api/location/range?user_id=${currentUser}&startDate=${startDate}&endDate=${endDate}`);
 
       if (!response.ok) {
         throw new Error('Error al obtener el historial de ubicaciones');
@@ -425,7 +431,7 @@ function App() {
         clearInterval(interval);
       }
     };
-  }, [isLiveMode]); // <-- Añade isLiveMode como dependencia
+  }, [currentUser, isLiveMode]); // <-- Añade isLiveMode como dependencia
 
   const formatTimestamp = (timestamp) => {
     const date = new Date(parseInt(timestamp));
@@ -478,6 +484,22 @@ function App() {
               <h1 className="font-bold text-7xl bg-gradient-to-r from-sky-400 to-cyan-300 text-transparent bg-clip-text" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {config.APP_NAME}
               </h1>
+              {/* --- Selector de Usuario --- */}
+  <div className="flex justify-center gap-4">
+    {Object.keys(users).map(userId => (
+      <button
+        key={userId}
+        onClick={() => setCurrentUser(userId)}
+        className={`px-4 py-2 rounded-lg transition-colors ${
+          currentUser === userId
+            ? 'bg-sky-600 text-white'
+            : 'bg-white/10 text-white/70 hover:bg-white/20'
+        }`}
+      >
+        {users[userId].name}
+      </button>
+    ))}
+  </div>
             <LocationInfo
               location={locationData}
               formatTimestamp={formatTimestamp}
