@@ -17,9 +17,11 @@
     "@tailwindcss/vite": "^4.1.13",
     "dayjs": "^1.11.18",
     "leaflet": "^1.9.4",
+    "leaflet-draw": "^1.0.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-leaflet": "^5.0.0",
+    "react-leaflet-draw": "^0.21.0",
     "react-loading-indicators": "^1.0.1",
     "tailwindcss": "^4.1.13"
   },

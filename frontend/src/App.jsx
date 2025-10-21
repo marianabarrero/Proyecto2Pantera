@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker, Rectangle, FeatureGroup } from 'react-leaflet';
+import { EditControl } from 'react-leaflet-draw';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
 import L, { Icon } from 'leaflet';
 import { ThreeDot } from 'react-loading-indicators';
 
@@ -44,6 +46,20 @@ const DEVICE_COLORS = [
   '#FCBAD3', // Rosa claro
 ];
 
+// Colores para diferentes recorridos
+const JOURNEY_COLORS = [
+  '#FF0000', // Rojo
+  '#00FF00', // Verde
+  '#0000FF', // Azul
+  '#FFFF00', // Amarillo
+  '#FF00FF', // Magenta
+  '#00FFFF', // Cyan
+  '#FFA500', // Naranja
+  '#800080', // Púrpura
+  '#008080', // Teal
+  '#FFC0CB', // Rosa
+];
+
 // Función para obtener color según device_id
 const getColorForDevice = (deviceId, allDevices) => {
   if (!deviceId) return DEVICE_COLORS[0];
@@ -51,7 +67,7 @@ const getColorForDevice = (deviceId, allDevices) => {
   return DEVICE_COLORS[index % DEVICE_COLORS.length];
 };
 
-// Función para verificar si un dispositivo está activo (últimos 20 segundos)
+// Función para verificar si un dispositivo está activo (últimos 30 segundos)
 const isDeviceActive = (timestamp) => {
   const now = Date.now();
   const deviceTime = parseInt(timestamp);
@@ -78,7 +94,67 @@ const ErrorMessage = ({ error, onRetry }) => (
   </div>
 );
 
-// --- NUEVO Modal de Búsqueda con MUI DateTimePicker ---
+// --- Modal de Selección de Dispositivo para Travel Record ---
+const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
+  const [selectedDevice, setSelectedDevice] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    if (selectedDevice) {
+      onSelectDevice(selectedDevice);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative glassmorphism-strong rounded-4xl p-8 mx-4 w-full max-w-md transform">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-white">Select Device</h2>
+          <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1">
+            ✕
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-white mb-2">Choose a device to view travel records:</label>
+          <select
+            value={selectedDevice}
+            onChange={(e) => setSelectedDevice(e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+          >
+            <option value="">-- Select Device --</option>
+            {devices.map((device) => (
+              <option key={device.device_id} value={device.device_id}>
+                {device.device_id}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex gap-4">
+          <button
+            onClick={onClose}
+            className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!selectedDevice}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Modal de Búsqueda con MUI DateTimePicker ---
 const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -248,8 +324,8 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
   );
 };
 
-// --- NUEVO Componente de Lista de Dispositivos ---
-const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch }) => {
+// --- Componente de Lista de Dispositivos ---
+const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord }) => {
   return (
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong'>
       <div className='rounded-4xl h-auto'>
@@ -306,6 +382,13 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch }) => {
       </div>
 
       <button
+        onClick={onOpenTravelRecord}
+        className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
+      >
+        <span className='group-hover:text-white/90 duration-300'>Travel Record</span>
+      </button>
+
+      <button
         onClick={onOpenDateSearch}
         className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
       >
@@ -343,7 +426,16 @@ const MapUpdater = ({ bounds, hasUserInteracted }) => {
 };
 
 // --- Componente del Mapa ---
-const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
+const LocationMap = ({ 
+  locations, 
+  formatTimestamp, 
+  paths, 
+  allDevices, 
+  travelRecordMode, 
+  onAreaDrawn, 
+  journeys,
+  travelRecordDevice 
+}) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   
   // Usar la primera ubicación como centro inicial, o coordenadas por defecto
@@ -355,7 +447,18 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
   // Calcular bounds para todos los puntos de todos los paths Y todas las ubicaciones actuales
   const allPathPoints = Object.values(paths).flat();
   const currentLocationPoints = locations.map(loc => [parseFloat(loc.latitude), parseFloat(loc.longitude)]);
-  const allPoints = [...allPathPoints, ...currentLocationPoints];
+  
+  // Si hay journeys, agregar esos puntos también
+  let journeyPoints = [];
+  if (journeys.length > 0) {
+    journeys.forEach(journey => {
+      journey.points.forEach(point => {
+        journeyPoints.push([parseFloat(point.latitude), parseFloat(point.longitude)]);
+      });
+    });
+  }
+  
+  const allPoints = [...allPathPoints, ...currentLocationPoints, ...journeyPoints];
   const bounds = allPoints.length > 0 ? allPoints : [position];
 
   // Componente interno para detectar interacciones del usuario
@@ -381,6 +484,20 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
     return null;
   };
 
+  const handleCreated = (e) => {
+    const { layer } = e;
+    if (layer instanceof L.Rectangle) {
+      const bounds = layer.getBounds();
+      const area = {
+        minLat: bounds.getSouth(),
+        maxLat: bounds.getNorth(),
+        minLng: bounds.getWest(),
+        maxLng: bounds.getEast()
+      };
+      onAreaDrawn(area);
+    }
+  };
+
   return (
     <div className='glassmorphism-strong rounded-4xl backdrop-blur-lg shadow-lg p-4 w-full mx-4'>
       <MapContainer
@@ -393,8 +510,43 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
-        {/* Renderizar marcadores circulares para CADA dispositivo activo */}
-        {locations.map((location, index) => {
+        {/* Modo Travel Record con herramientas de dibujo */}
+        {travelRecordMode && (
+          <FeatureGroup>
+            <EditControl
+              position="topright"
+              onCreated={handleCreated}
+              draw={{
+                rectangle: true,
+                circle: false,
+                circlemarker: false,
+                marker: false,
+                polyline: false,
+                polygon: false,
+              }}
+              edit={{
+                edit: false,
+                remove: false,
+              }}
+            />
+          </FeatureGroup>
+        )}
+
+        {/* Renderizar journeys si existen */}
+        {journeys.length > 0 && journeys.map((journey, index) => (
+          <Polyline
+            key={`journey-${index}`}
+            pathOptions={{ 
+              color: JOURNEY_COLORS[index % JOURNEY_COLORS.length], 
+              weight: 5,
+              opacity: 0.8
+            }}
+            positions={journey.points.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)])}
+          />
+        ))}
+        
+        {/* Renderizar marcadores circulares para CADA dispositivo activo solo si NO estamos en modo travel record */}
+        {!travelRecordMode && locations.map((location, index) => {
           const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
           const activeDeviceIds = locations.map(loc => loc.device_id);
           const deviceColor = getColorForDevice(location.device_id, activeDeviceIds);
@@ -424,8 +576,8 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
           );
         })}
 
-        {/* Renderizar polilíneas para cada dispositivo con su color */}
-        {Object.entries(paths).map(([deviceId, devicePath]) => {
+        {/* Renderizar polilíneas para cada dispositivo con su color solo si NO estamos en modo travel record */}
+        {!travelRecordMode && Object.entries(paths).map(([deviceId, devicePath]) => {
           if (devicePath.length === 0) return null;
           const activeDeviceIds = locations.map(loc => loc.device_id);
           return (
@@ -444,8 +596,8 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
         <InteractionDetector />
       </MapContainer>
 
-      {/* Leyenda de dispositivos activos */}
-      {locations.length > 1 && (
+      {/* Leyenda de dispositivos activos solo si NO estamos en modo travel record */}
+      {!travelRecordMode && locations.length > 1 && (
         <div className="mt-4 p-4 bg-white/10 rounded-xl">
           <h3 className="text-white font-bold mb-2">Active Devices:</h3>
           <div className="flex flex-wrap gap-2">
@@ -458,6 +610,43 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
                 <span className="text-white text-sm">{location.device_id}</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Leyenda de recorridos cuando hay journeys */}
+      {journeys.length > 0 && (
+        <div className="mt-4 p-4 bg-white/10 rounded-xl">
+          <h3 className="text-white font-bold mb-3">Travel Records for {travelRecordDevice}:</h3>
+          <div className="space-y-2">
+            {journeys.map((journey, index) => {
+              const startDate = new Date(journey.start_time);
+              const endDate = new Date(journey.end_time);
+              return (
+                <div key={`legend-${index}`} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+                  <div 
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: JOURNEY_COLORS[index % JOURNEY_COLORS.length] }}
+                  />
+                  <div className="text-white text-xs">
+                    <div className="font-semibold">Journey {index + 1}</div>
+                    <div className="text-white/70">
+                      {startDate.toLocaleString('es-ES', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })} - {endDate.toLocaleString('es-ES', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -475,6 +664,12 @@ function App() {
   const [activeDeviceIds, setActiveDeviceIds] = useState([]); // IDs de dispositivos activos
   const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(true);
+  
+  // Estados para Travel Record
+  const [travelRecordMode, setTravelRecordMode] = useState(false);
+  const [isDeviceSelectionModalOpen, setIsDeviceSelectionModalOpen] = useState(false);
+  const [selectedDeviceForTravel, setSelectedDeviceForTravel] = useState(null);
+  const [journeys, setJourneys] = useState([]);
 
   // Obtener lista de TODOS los dispositivos registrados en la plataforma
   const fetchAllDevices = async () => {
@@ -493,7 +688,7 @@ function App() {
     }
   };
 
-  // Filtrar dispositivos activos (últimos 20 segundos)
+  // Filtrar dispositivos activos (últimos 30 segundos)
   const filterActiveDevices = (locations) => {
     return locations.filter(location => isDeviceActive(location.timestamp_value));
   };
@@ -511,7 +706,7 @@ function App() {
     });
   };
 
-  // MODIFICADO: Obtener ubicaciones de TODOS los dispositivos y filtrar activos
+  // Obtener ubicaciones de TODOS los dispositivos y filtrar activos
   const fetchLatestLocations = async () => {
     try {
       const response = await fetch(`${config.API_BASE_URL}/api/location/latest-by-devices`);
@@ -526,7 +721,7 @@ function App() {
       } else {
         const data = await response.json();
         
-        // Filtrar solo dispositivos activos (últimos 20 segundos)
+        // Filtrar solo dispositivos activos (últimos 30 segundos)
         const activeLocations = filterActiveDevices(data);
         setLocationsData(activeLocations);
 
@@ -628,6 +823,62 @@ function App() {
     }
   };
 
+  // Función para iniciar el modo Travel Record
+  const handleOpenTravelRecord = () => {
+    setIsDeviceSelectionModalOpen(true);
+  };
+
+  // Función cuando se selecciona un dispositivo
+  const handleDeviceSelected = (deviceId) => {
+    setSelectedDeviceForTravel(deviceId);
+    setTravelRecordMode(true);
+    setIsLiveMode(false);
+    setJourneys([]);
+    // Limpiar el mapa
+    setLocationsData([]);
+    setPaths({});
+  };
+
+  // Función cuando se dibuja un área
+  const handleAreaDrawn = async (area) => {
+    if (!selectedDeviceForTravel) return;
+
+    setLoading(true);
+    try {
+      const url = `${config.API_BASE_URL}/api/location/area-records?minLat=${area.minLat}&maxLat=${area.maxLat}&minLng=${area.minLng}&maxLng=${area.maxLng}&device_id=${selectedDeviceForTravel}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('Error al obtener recorridos');
+      }
+
+      const data = await response.json();
+      
+      if (data.length > 0) {
+        setJourneys(data);
+        setError(null);
+      } else {
+        setError('No se encontraron recorridos en esta área para el dispositivo seleccionado.');
+        setJourneys([]);
+      }
+    } catch (err) {
+      setError('Error al buscar recorridos en el área.');
+      console.error('Error fetching area records:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para salir del modo Travel Record
+  const handleExitTravelRecord = () => {
+    setTravelRecordMode(false);
+    setSelectedDeviceForTravel(null);
+    setJourneys([]);
+    setIsLiveMode(true);
+    setLoading(true);
+  };
+
   useEffect(() => {
     fetchAllDevices();
   }, []);
@@ -675,7 +926,7 @@ function App() {
           <ErrorMessage error={error} onRetry={isLiveMode ? fetchLatestLocations : () => window.location.reload()} />
         ) : (
           <>
-            {!isLiveMode && (
+            {!isLiveMode && !travelRecordMode && (
               <div className="absolute top-40 left-1/2 -translate-x-1/2 z-40">
                 <button
                   onClick={() => {
@@ -690,12 +941,28 @@ function App() {
                 </button>
               </div>
             )}
+
+            {travelRecordMode && (
+              <div className="absolute top-40 left-1/2 -translate-x-1/2 z-40">
+                <button
+                  onClick={handleExitTravelRecord}
+                  className="flex items-left gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl shadow-lg transition-all font-medium"
+                >
+                  Exit Travel Record Mode
+                </button>
+              </div>
+            )}
+
             <div className="w-full md:w-3/4 animate-slide-in-left interactive-glow rounded-4xl">
               <LocationMap 
                 locations={locationsData}
                 formatTimestamp={formatTimestamp} 
                 paths={paths}
                 allDevices={allDevices}
+                travelRecordMode={travelRecordMode}
+                onAreaDrawn={handleAreaDrawn}
+                journeys={journeys}
+                travelRecordDevice={selectedDeviceForTravel}
               />
             </div>
             <div className="w-full md:w-1/4 flex flex-col gap-8 text-center animate-slide-in-right">
@@ -706,6 +973,7 @@ function App() {
                 allDevices={allDevices}
                 activeDeviceIds={activeDeviceIds}
                 onOpenDateSearch={() => setIsDateSearchModalOpen(true)}
+                onOpenTravelRecord={handleOpenTravelRecord}
               />
             </div>
           </>
@@ -716,6 +984,13 @@ function App() {
         isOpen={isDateSearchModalOpen}
         onClose={() => setIsDateSearchModalOpen(false)}
         onSearch={handleDateSearch}
+        devices={allDevices}
+      />
+
+      <DeviceSelectionModal
+        isOpen={isDeviceSelectionModalOpen}
+        onClose={() => setIsDeviceSelectionModalOpen(false)}
+        onSelectDevice={handleDeviceSelected}
         devices={allDevices}
       />
     </div>
