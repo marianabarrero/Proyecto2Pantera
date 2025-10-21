@@ -470,14 +470,14 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
         onClick={onOpenTravelRecord}
         className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
       >
-        <span className='group-hover:text-white/90 duration-300'>Travel Record</span>
+        <span className='text-white duration-300'>Travel Record</span>
       </button>
 
       <button
         onClick={onOpenDateSearch}
         className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
       >
-        <span className='group-hover:text-white/90 duration-300'>Search by Date</span>
+        <span className='text-white duration-300'>Search by Date</span>
       </button>
     </div>
   );
@@ -567,7 +567,7 @@ const LocationMap = ({
           <p className="text-white text-sm text-center">
             📍 <strong>Click twice on the map to draw a rectangle.</strong> First click = start corner, second click = end corner.
             <br/>
-            <span className="text-xs text-white/70">Press ESC or right-click to cancel.</span>
+            <span className="text-xs text-white/70">Right-click to cancel.</span>
           </p>
         </div>
       )}
