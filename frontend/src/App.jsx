@@ -240,65 +240,78 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
   );
 };
 
-const LocationInfo = ({ location, formatTimestamp, onOpenDateSearch, allDevices }) => (
-  <>
-    <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong '>
-      <div className=' rounded-4xl h-auto'>
-        <h2 className='text-2xl font-bold text-white text-center rounded-4xl mb-8'>Last Location</h2>
+const LocationInfo = ({ locations, formatTimestamp, onOpenDateSearch, allDevices }) => {
+  // Mostrar información del último dispositivo actualizado
+  const latestLocation = locations.length > 0 ? locations[locations.length - 1] : null;
+  
+  if (!latestLocation) return null;
 
-        <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
-          <div className='flex flex-row gap-2 justify-left'>
-            <h3 className='text-l text-white rounded-xl inline-block'>Device ID:</h3>
-          </div>
-          <div className="flex flex-col items-end">
-            <span 
-              className='text-white/80 font-mono text-xs px-3 py-1 rounded-full'
-              style={{ 
-                backgroundColor: getColorForDevice(location.device_id, allDevices) + '40',
-                border: `2px solid ${getColorForDevice(location.device_id, allDevices)}`
-              }}
-            >
-              {location.device_id || 'N/A'}
-            </span>
-          </div>
-        </div>
+  return (
+    <>
+      <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong '>
+        <div className=' rounded-4xl h-auto'>
+          <h2 className='text-2xl font-bold text-white text-center rounded-4xl mb-8'>
+            {locations.length > 1 ? 'Active Devices' : 'Last Location'}
+          </h2>
 
-        <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
-          <div className='flex flex-row gap-2 justify-left'>
-            <h3 className='text-l text-white rounded-xl inline-block'>Latitude:</h3>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className='text-white/80 font-mono'>{parseFloat(location.latitude).toFixed(8)}</span>
-          </div>
-        </div>
+          {locations.map((location, index) => (
+            <div key={location.device_id || index} className="mb-6 pb-4 border-b border-white/10 last:border-b-0">
+              <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
+                <div className='flex flex-row gap-2 justify-left'>
+                  <h3 className='text-l text-white rounded-xl inline-block'>Device ID:</h3>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span 
+                    className='text-white/80 font-mono text-xs px-3 py-1 rounded-full'
+                    style={{ 
+                      backgroundColor: getColorForDevice(location.device_id, allDevices) + '40',
+                      border: `2px solid ${getColorForDevice(location.device_id, allDevices)}`
+                    }}
+                  >
+                    {location.device_id || 'N/A'}
+                  </span>
+                </div>
+              </div>
 
-        <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
-          <div className='flex flex-row gap-2 justify-left'>
-            <h3 className='text-l text-white rounded-xl inline-block'>Longitude:</h3>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className='text-white/80 font-mono'>{parseFloat(location.longitude).toFixed(8)}</span>
-          </div>
-        </div>
+              <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
+                <div className='flex flex-row gap-2 justify-left'>
+                  <h3 className='text-l text-white rounded-xl inline-block'>Latitude:</h3>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className='text-white/80 font-mono text-sm'>{parseFloat(location.latitude).toFixed(6)}</span>
+                </div>
+              </div>
 
-        <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
-          <div className='flex flex-row gap-2 group justify-left'>
-            <h3 className='text-l text-white rounded-xl inline-block'>Timestamp:</h3>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className='text-white/80 font-mono'>{formatTimestamp(location.timestamp_value)}</span>
-          </div>
+              <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
+                <div className='flex flex-row gap-2 justify-left'>
+                  <h3 className='text-l text-white rounded-xl inline-block'>Longitude:</h3>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className='text-white/80 font-mono text-sm'>{parseFloat(location.longitude).toFixed(6)}</span>
+                </div>
+              </div>
+
+              <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
+                <div className='flex flex-row gap-2 group justify-left'>
+                  <h3 className='text-l text-white rounded-xl inline-block'>Updated:</h3>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className='text-white/80 font-mono text-xs'>{formatTimestamp(location.timestamp_value)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+        <button
+          onClick={onOpenDateSearch}
+          className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-800 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-sky-600 to-sky-700 text-white hover:from-sky-700 hover:to-sky-800 px-20 py-3 md:px-20 md:py-2 text-base md:text-lg mt-2 mx-auto'
+        >
+          <span className='group-hover:text-white/90 duration-300'>Search by Date</span>
+        </button>
       </div>
-      <button
-        onClick={onOpenDateSearch}
-        className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-800 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-sky-600 to-sky-700 text-white hover:from-sky-700 hover:to-sky-800 px-20 py-3 md:px-20 md:py-2 text-base md:text-lg mt-2 mx-auto'
-      >
-        <span className='group-hover:text-white/90 duration-300'>Search by Date</span>
-      </button>
-    </div>
-  </>
-);
+    </>
+  );
+};
 
 // --- Componente que actualiza la vista del mapa ---
 const MapUpdater = ({ bounds }) => {
@@ -308,7 +321,11 @@ const MapUpdater = ({ bounds }) => {
     if (bounds && bounds.length > 0) {
       // Si hay múltiples puntos, ajustar los límites
       if (bounds.length > 1) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+        try {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+        } catch (e) {
+          console.error('Error ajustando bounds:', e);
+        }
       } else {
         // Si solo hay un punto, hacer zoom normal
         map.flyTo(bounds[0], 18, {
@@ -323,16 +340,20 @@ const MapUpdater = ({ bounds }) => {
 };
 
 // --- Componente del Mapa ---
-const LocationMap = ({ location, formatTimestamp, paths, allDevices }) => {
-  const position = [parseFloat(location.latitude), parseFloat(location.longitude)];
+const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
+  // Usar la primera ubicación como centro inicial
+  const centerLocation = locations[0] || { latitude: 40.7128, longitude: -74.0060 };
+  const position = [parseFloat(centerLocation.latitude), parseFloat(centerLocation.longitude)];
 
   const customIcon = new Icon({
     iconUrl: "/icon.png",
     iconSize: [70, 70]
   });
 
-  // Calcular bounds para todos los puntos de todos los paths
-  const allPoints = Object.values(paths).flat();
+  // Calcular bounds para todos los puntos de todos los paths Y todas las ubicaciones actuales
+  const allPathPoints = Object.values(paths).flat();
+  const currentLocationPoints = locations.map(loc => [parseFloat(loc.latitude), parseFloat(loc.longitude)]);
+  const allPoints = [...allPathPoints, ...currentLocationPoints];
   const bounds = allPoints.length > 0 ? allPoints : [position];
 
   return (
@@ -347,28 +368,37 @@ const LocationMap = ({ location, formatTimestamp, paths, allDevices }) => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
-        <Marker position={position} icon={customIcon}>
-          <Popup>
-            <div className="text-center">
-              <strong>{location.device_id || 'Current Location'}</strong><br />
-              <small>Received: {formatTimestamp(location.timestamp_value)}</small><br />
-              <small>Lat: {parseFloat(location.latitude).toFixed(6)}</small><br />
-              <small>Lng: {parseFloat(location.longitude).toFixed(6)}</small>
-            </div>
-          </Popup>
-        </Marker>
+        {/* Renderizar marcadores para CADA dispositivo activo */}
+        {locations.map((location, index) => {
+          const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
+          return (
+            <Marker key={location.device_id || index} position={markerPosition} icon={customIcon}>
+              <Popup>
+                <div className="text-center">
+                  <strong>{location.device_id || 'Device'}</strong><br />
+                  <small>Updated: {formatTimestamp(location.timestamp_value)}</small><br />
+                  <small>Lat: {parseFloat(location.latitude).toFixed(6)}</small><br />
+                  <small>Lng: {parseFloat(location.longitude).toFixed(6)}</small>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
 
         {/* Renderizar polilíneas para cada dispositivo con su color */}
-        {Object.entries(paths).map(([deviceId, devicePath]) => (
-          <Polyline
-            key={deviceId}
-            pathOptions={{ 
-              color: getColorForDevice(deviceId, allDevices), 
-              weight: 4 
-            }}
-            positions={devicePath}
-          />
-        ))}
+        {Object.entries(paths).map(([deviceId, devicePath]) => {
+          if (devicePath.length === 0) return null;
+          return (
+            <Polyline
+              key={deviceId}
+              pathOptions={{ 
+                color: getColorForDevice(deviceId, allDevices), 
+                weight: 4 
+              }}
+              positions={devicePath}
+            />
+          );
+        })}
 
         <MapUpdater bounds={bounds} />
       </MapContainer>
@@ -376,7 +406,7 @@ const LocationMap = ({ location, formatTimestamp, paths, allDevices }) => {
       {/* Leyenda de dispositivos */}
       {allDevices.length > 1 && (
         <div className="mt-4 p-4 bg-white/10 rounded-xl">
-          <h3 className="text-white font-bold mb-2">Devices:</h3>
+          <h3 className="text-white font-bold mb-2">Active Devices:</h3>
           <div className="flex flex-wrap gap-2">
             {allDevices.map((deviceId) => (
               <div key={deviceId} className="flex items-center gap-2">
@@ -396,10 +426,10 @@ const LocationMap = ({ location, formatTimestamp, paths, allDevices }) => {
 
 // --- Componente Principal ---
 function App() {
-  const [locationData, setLocationData] = useState(null);
+  const [locationsData, setLocationsData] = useState([]); // CAMBIO: Array de ubicaciones
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [paths, setPaths] = useState({}); // Cambio: almacenar paths por device_id
+  const [paths, setPaths] = useState({});
   const [devices, setDevices] = useState([]);
   const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(true);
@@ -417,42 +447,45 @@ function App() {
     }
   };
 
-  const fetchLatestLocation = async () => {
+  // MODIFICADO: Obtener ubicaciones de TODOS los dispositivos
+  const fetchLatestLocations = async () => {
     try {
-      const response = await fetch(`${config.API_BASE_URL}/api/location/latest`);
+      const response = await fetch(`${config.API_BASE_URL}/api/location/latest-by-devices`);
 
       if (!response.ok) {
         if (response.status === 404) {
           setError('No hay datos de ubicación disponibles');
-          setLocationData(null);
+          setLocationsData([]);
         } else {
           throw new Error('Error al obtener datos');
         }
       } else {
         const data = await response.json();
-        setLocationData(data);
+        setLocationsData(data);
 
-        const newPosition = [parseFloat(data.latitude), parseFloat(data.longitude)];
-        const deviceId = data.device_id || 'unknown';
-
+        // Actualizar paths para cada dispositivo
         setPaths(prevPaths => {
-          const devicePath = prevPaths[deviceId] || [];
-          const lastPoint = devicePath[devicePath.length - 1];
+          const newPaths = { ...prevPaths };
           
-          if (!lastPoint || lastPoint[0] !== newPosition[0] || lastPoint[1] !== newPosition[1]) {
-            return {
-              ...prevPaths,
-              [deviceId]: [...devicePath, newPosition]
-            };
-          }
-          return prevPaths;
+          data.forEach(location => {
+            const deviceId = location.device_id || 'unknown';
+            const newPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
+            const devicePath = newPaths[deviceId] || [];
+            const lastPoint = devicePath[devicePath.length - 1];
+            
+            if (!lastPoint || lastPoint[0] !== newPosition[0] || lastPoint[1] !== newPosition[1]) {
+              newPaths[deviceId] = [...devicePath, newPosition];
+            }
+          });
+          
+          return newPaths;
         });
 
         setError(null);
       }
     } catch (err) {
       setError('Error de conexión con el servidor');
-      console.error('Error fetching location:', err);
+      console.error('Error fetching locations:', err);
     } finally {
       setLoading(false);
     }
@@ -481,6 +514,8 @@ function App() {
       if (historicalData.length > 0) {
         // Agrupar datos por device_id
         const pathsByDevice = {};
+        const locationsByDevice = {};
+        
         historicalData.forEach(point => {
           const devId = point.device_id || 'unknown';
           if (!pathsByDevice[devId]) {
@@ -490,23 +525,20 @@ function App() {
             parseFloat(point.latitude),
             parseFloat(point.longitude)
           ]);
+          
+          // Guardar la última ubicación de cada dispositivo
+          locationsByDevice[devId] = point;
         });
 
         setPaths(pathsByDevice);
-
-        // Actualizar ubicación principal a la última del rango
-        const lastLocationInRange = historicalData[historicalData.length - 1];
-        setLocationData({
-          latitude: lastLocationInRange.latitude,
-          longitude: lastLocationInRange.longitude,
-          timestamp_value: lastLocationInRange.timestamp_value,
-          device_id: lastLocationInRange.device_id
-        });
+        
+        // Convertir a array para mostrar todos los dispositivos
+        setLocationsData(Object.values(locationsByDevice));
 
       } else {
         setPaths({});
         setError('No hay datos de ubicación en este tiempo.');
-        setLocationData(null);
+        setLocationsData([]);
       }
 
     } catch (err) {
@@ -518,14 +550,14 @@ function App() {
   };
 
   useEffect(() => {
-    fetchDevices(); // Cargar dispositivos al inicio
+    fetchDevices();
   }, []);
 
   useEffect(() => {
     let interval;
     if (isLiveMode) {
-      fetchLatestLocation();
-      interval = setInterval(fetchLatestLocation, config.POLLING_INTERVAL);
+      fetchLatestLocations();
+      interval = setInterval(fetchLatestLocations, config.POLLING_INTERVAL);
     }
 
     return () => {
@@ -558,8 +590,8 @@ function App() {
         {loading ? (
           <LoadingSpinner />
         ) : error ? (
-          <ErrorMessage error={error} onRetry={isLiveMode ? fetchLatestLocation : () => window.location.reload()} retryText={isLiveMode ? "Reintentar" : "Volver al menú principal"} />
-        ) : locationData ? (
+          <ErrorMessage error={error} onRetry={isLiveMode ? fetchLatestLocations : () => window.location.reload()} />
+        ) : locationsData.length > 0 ? (
           <>
             {!isLiveMode && (
               <div className="absolute top-40 left-1/2 -translate-x-1/2 z-40">
@@ -578,7 +610,7 @@ function App() {
             )}
             <div className="w-full md:w-3/4 animate-slide-in-left interactive-glow rounded-4xl">
               <LocationMap 
-                location={locationData} 
+                locations={locationsData}
                 formatTimestamp={formatTimestamp} 
                 paths={paths}
                 allDevices={devices}
@@ -589,7 +621,7 @@ function App() {
                 {config.APP_NAME}
               </h1>
               <LocationInfo
-                location={locationData}
+                locations={locationsData}
                 formatTimestamp={formatTimestamp}
                 onOpenDateSearch={() => setIsDateSearchModalOpen(true)}
                 allDevices={devices}
