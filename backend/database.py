@@ -170,4 +170,19 @@ class Database:
             records = await connection.fetch(query)
             return [record['device_id'] for record in records]
 
+    async def get_locations_in_area(self, min_lat, max_lat, min_lng, max_lng, device_id):
+        """Obtiene ubicaciones de un dispositivo dentro de un área rectangular"""
+        query = """
+        SELECT latitude, longitude, timestamp_value, created_at, device_id
+        FROM location_data
+        WHERE device_id = $1
+        AND latitude BETWEEN $2 AND $3
+        AND longitude BETWEEN $4 AND $5
+        ORDER BY timestamp_value ASC;
+        """
+        
+        async with self.pool.acquire() as connection:
+            records = await connection.fetch(query, device_id, min_lat, max_lat, min_lng, max_lng)
+            return [dict(record) for record in records]
+
 db = Database()

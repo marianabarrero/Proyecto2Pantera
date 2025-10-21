@@ -132,6 +132,61 @@ async def get_devices():
         print(f"Error obteniendo dispositivos: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
+@app.get("/api/location/area-records", response_model=list[dict])
+async def get_area_records(
+    minLat: float = Query(..., description="Latitud mínima del área"),
+    maxLat: float = Query(..., description="Latitud máxima del área"),
+    minLng: float = Query(..., description="Longitud mínima del área"),
+    maxLng: float = Query(..., description="Longitud máxima del área"),
+    device_id: str = Query(..., description="ID del dispositivo")
+):
+    """Endpoint para obtener recorridos de un dispositivo dentro de un área rectangular"""
+    try:
+        results = await db.get_locations_in_area(minLat, maxLat, minLng, maxLng, device_id)
+        
+        if not results:
+            return []
+        
+        # Separar en recorridos basados en diferencia de tiempo de 5 minutos
+        journeys = []
+        current_journey = []
+        
+        for i, point in enumerate(results):
+            if i == 0:
+                current_journey.append(point)
+            else:
+                prev_time = results[i-1]['timestamp_value']
+                curr_time = point['timestamp_value']
+                time_diff = curr_time - prev_time
+                
+                # Si la diferencia es mayor a 5 minutos (300000 ms), es un nuevo recorrido
+                if time_diff > 300000:
+                    if current_journey:
+                        journeys.append(current_journey)
+                    current_journey = [point]
+                else:
+                    current_journey.append(point)
+        
+        # Agregar el último recorrido
+        if current_journey:
+            journeys.append(current_journey)
+        
+        # Formatear respuesta
+        formatted_journeys = []
+        for idx, journey in enumerate(journeys):
+            formatted_journeys.append({
+                'journey_id': idx,
+                'points': journey,
+                'start_time': journey[0]['timestamp_value'],
+                'end_time': journey[-1]['timestamp_value']
+            })
+        
+        return formatted_journeys
+    
+    except Exception as e:
+        print(f"Error obteniendo recorridos por área: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
 @app.get("/api/health", response_model=HealthResponse)
 async def health_check():
     """Endpoint de health check"""
