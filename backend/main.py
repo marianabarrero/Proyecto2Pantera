@@ -4,7 +4,6 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-# Se elimina la importación de 'parser' porque ya no es necesaria
 
 from database import db
 from udp_server import start_udp_server, stop_udp_server
@@ -62,10 +61,10 @@ async def shutdown_event():
     await db.close_connection_pool()
 
 @app.get("/api/location/latest", response_model=LocationResponse)
-async def get_latest_location():
-    """Endpoint para obtener el último registro"""
+async def get_latest_location(device_id: str = Query(None, description="ID del dispositivo (opcional)")):
+    """Endpoint para obtener el último registro, opcionalmente filtrado por device_id"""
     try:
-        result = await db.get_latest_location()
+        result = await db.get_latest_location(device_id=device_id)
         if not result:
             raise HTTPException(status_code=404, detail="No hay datos disponibles")
         return LocationResponse(**result)
@@ -76,29 +75,30 @@ async def get_latest_location():
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @app.get("/api/location/all", response_model=list[AllLocationsResponse])
-async def get_all_locations(limit: int = Query(default=100, ge=1, le=1000)):
-    """Endpoint para obtener todos los registros """
+async def get_all_locations(
+    limit: int = Query(default=100, ge=1, le=1000),
+    device_id: str = Query(None, description="ID del dispositivo (opcional)")
+):
+    """Endpoint para obtener todos los registros, opcionalmente filtrados por device_id"""
     try:
-        results = await db.get_all_locations(limit)
+        results = await db.get_all_locations(limit, device_id=device_id)
         return [AllLocationsResponse(**result) for result in results]
     except Exception as e:
         print(f"Error obteniendo registros: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-# --- FUNCIÓN CORREGIDA Y SIMPLIFICADA ---
 @app.get("/api/location/range", response_model=list[LocationResponse])
 async def get_location_range(
-    # Cambiamos 'str' por 'datetime'. FastAPI se encargará de la conversión.
     startDate: datetime = Query(..., description="Fecha de inicio en formato ISO 8601"),
-    endDate: datetime = Query(..., description="Fecha de fin en formato ISO 8601")
+    endDate: datetime = Query(..., description="Fecha de fin en formato ISO 8601"),
+    device_id: str = Query(None, description="ID del dispositivo (opcional)")
 ):
-    """Endpoint para obtener registros por rango de fechas"""
+    """Endpoint para obtener registros por rango de fechas, opcionalmente filtrados por device_id"""
     try:
-        # Ya no necesitamos un formato de texto a otro, las variables ya son objetos datetime.
         start_time = int(startDate.timestamp() * 1000)
         end_time = int(endDate.timestamp() * 1000)
 
-        results = await db.get_locations_by_range(start_time, end_time)
+        results = await db.get_locations_by_range(start_time, end_time, device_id=device_id)
         return [LocationResponse(**result) for result in results]
 
     except Exception as e:
@@ -108,21 +108,25 @@ async def get_location_range(
             detail="Error interno del servidor"
         )
 
+@app.get("/api/devices", response_model=list[str])
+async def get_devices():
+    """Endpoint para obtener todos los device_id únicos"""
+    try:
+        devices = await db.get_all_device_ids()
+        return devices
+    except Exception as e:
+        print(f"Error obteniendo dispositivos: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
 @app.get("/api/health", response_model=HealthResponse)
 async def health_check():
-    """Health check"""
+    """Endpoint de health check"""
     return HealthResponse(
-        status="OK",
+        status="healthy",
         timestamp=datetime.now().isoformat()
     )
 
 if __name__ == "__main__":
     import uvicorn
-    http_port = int(os.getenv('HTTP_PORT', 3001))
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=http_port,
-        reload=False,
-        log_level="info"
-    )
+    port = int(os.getenv('HTTP_PORT', 3001))
+    uvicorn.run(app, host="0.0.0.0", port=port)

@@ -21,7 +21,6 @@ const config = {
   APP_SUBTITLE: '',
   APP_VERSION: '2.0.0',
   POLLING_INTERVAL: import.meta.env.VITE_POLLING_INTERVAL || 5000,
-  // Ya no se necesitan las claves de Jawg
 };
 
 // Arreglo para el ícono por defecto de Leaflet en Vite
@@ -31,6 +30,25 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
+
+// Paleta de colores para diferentes dispositivos
+const DEVICE_COLORS = [
+  '#110394', // Azul oscuro
+  '#FF6B6B', // Rojo
+  '#4ECDC4', // Turquesa
+  '#FFD93D', // Amarillo
+  '#95E1D3', // Verde menta
+  '#F38181', // Rosa
+  '#AA96DA', // Púrpura
+  '#FCBAD3', // Rosa claro
+];
+
+// Función para obtener color según device_id
+const getColorForDevice = (deviceId, allDevices) => {
+  if (!deviceId) return DEVICE_COLORS[0];
+  const index = allDevices.indexOf(deviceId);
+  return DEVICE_COLORS[index % DEVICE_COLORS.length];
+};
 
 // --- Componentes de UI ---
 
@@ -53,9 +71,10 @@ const ErrorMessage = ({ error, onRetry }) => (
 );
 
 // --- NUEVO Modal de Búsqueda con MUI DateTimePicker ---
-const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
+const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -64,103 +83,94 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
     palette: {
       mode: 'dark',
       primary: {
-        main: '#0d47a1', // sky-500
+        main: '#0ea5e9',
       },
       background: {
-        paper: '#1a237e',
-      },
-      text: {
-        primary: '#FFFFFF',
-        secondary: '#E5E7EB', // gray-200
-      },
-      typography: {
-        fontFamily: 'Poppins, sans-serif',
+        default: '#1e293b',
+        paper: '#334155',
       },
     },
     components: {
-      MuiPickersToolbar: {
+      MuiOutlinedInput: {
         styleOverrides: {
           root: {
-            backgroundColor: 'rgba(13, 71, 161, 0.2)',
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(14, 165, 233, 0.5)',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#0ea5e9',
+            },
           },
         },
       },
-      MuiDialogActions: {
+      MuiInputLabel: {
         styleOverrides: {
           root: {
-            // Estilo para los botones dentro de las acciones del diálogo
-            '& .MuiButton-root': {
-              color: '#FFFFFF', // Color de texto blanco
-            },
+            color: 'rgba(255, 255, 255, 0.7)',
           },
         },
       },
     },
   });
 
-  const handleSearch = async () => {
-    // Verificación de que ambas fechas estén seleccionadas
-    if (!startDate || !endDate) {
-      setError('Please select both a start and end date.');
-      return;
-    }
-    // Verificación de que la fecha de fin sea posterior a la de inicio
-    if (endDate.isBefore(startDate)) {
-      setError('End date must be after the start date.');
-      return;
-    }
-
-    setError(''); // Limpiar errores previos
-    setIsLoading(true);
-
-    try {
-      // Simular búsqueda
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const searchData = {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      };
-
-      onSearch(searchData);
-      onClose(); // Cerrar el modal al finalizar
-    } catch (err) {
-      console.error('Error en búsqueda:', err);
-      setError('An unexpected error occurred during the search.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setStartDate(null);
-    setEndDate(null);
-    setError('');
-  };
-
-  // Resetea el formulario cuando el modal se cierra
   useEffect(() => {
     if (!isOpen) {
       resetForm();
     }
   }, [isOpen]);
 
+  const resetForm = () => {
+    setStartDate(null);
+    setEndDate(null);
+    setSelectedDevice('all');
+    setError('');
+  };
+
+  const handleSearch = async () => {
+    if (!startDate || !endDate) {
+      setError('Por favor, selecciona ambas fechas.');
+      return;
+    }
+
+    if (endDate.isBefore(startDate)) {
+      setError('La fecha de fin debe ser posterior a la fecha de inicio.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await onSearch({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        deviceId: selectedDevice === 'all' ? null : selectedDevice
+      });
+      onClose();
+    } catch (err) {
+      setError('Error al realizar la búsqueda. Inténtalo de nuevo.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal - Aumentado de tamaño para los pickers */}
       <div className="relative glassmorphism-strong rounded-4xl p-8 mx-4 w-full max-w-5xl transform">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-white">Select Date Range</h2>
           <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1">
+            ✕
           </button>
         </div>
 
@@ -171,27 +181,44 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
                 label="Start Date"
                 value={startDate}
                 onChange={(newValue) => setStartDate(newValue)}
-                maxDate={dayjs()} // No se pueden seleccionar fechas futuras
+                maxDate={dayjs()}
               />
               <DateTimePicker
                 label="End Date"
                 value={endDate}
                 onChange={(newValue) => setEndDate(newValue)}
-                minDate={startDate} // No se puede seleccionar antes de la fecha de inicio
-                disabled={!startDate} // Deshabilitado hasta que se elija fecha de inicio
+                minDate={startDate}
+                disabled={!startDate}
               />
             </DemoContainer>
           </LocalizationProvider>
         </ThemeProvider>
 
-        {/* Error Message */}
+        {/* Selector de dispositivo */}
+        {devices.length > 0 && (
+          <div className="mt-6">
+            <label className="block text-white mb-2">Filter by Device:</label>
+            <select
+              value={selectedDevice}
+              onChange={(e) => setSelectedDevice(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              <option value="all">All Devices</option>
+              {devices.map((device) => (
+                <option key={device} value={device}>
+                  {device}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {error && (
           <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-xl">
             {error}
           </div>
         )}
 
-        {/* Botones */}
         <div className="flex gap-4 pt-6 mt-4 border-t border-white/20">
           <button
             onClick={resetForm}
@@ -205,15 +232,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
             disabled={isLoading || !startDate || !endDate}
             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
-              <>
-                Searching...
-              </>
-            ) : (
-              <>
-                Search
-              </>
-            )}
+            {isLoading ? 'Searching...' : 'Search'}
           </button>
         </div>
       </div>
@@ -221,18 +240,26 @@ const DateSearchModal = ({ isOpen, onClose, onSearch }) => {
   );
 };
 
-
-const LocationInfo = ({ location, formatTimestamp, onOpenDateSearch }) => (
+const LocationInfo = ({ location, formatTimestamp, onOpenDateSearch, allDevices }) => (
   <>
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong '>
       <div className=' rounded-4xl h-auto'>
-        <h2 className='text-2xl font-bold text-white text-center rounded-4xl mb-8'>Last Location </h2>
+        <h2 className='text-2xl font-bold text-white text-center rounded-4xl mb-8'>Last Location</h2>
+
         <div className='flex flex-row justify-between gap-4 rounded-xl mb-3 pl-2 pr-6 py-2'>
           <div className='flex flex-row gap-2 justify-left'>
             <h3 className='text-l text-white rounded-xl inline-block'>Device ID:</h3>
           </div>
           <div className="flex flex-col items-end">
-            <span className='text-white/80 font-mono text-xs'>{location.device_id || 'N/A'}</span>
+            <span 
+              className='text-white/80 font-mono text-xs px-3 py-1 rounded-full'
+              style={{ 
+                backgroundColor: getColorForDevice(location.device_id, allDevices) + '40',
+                border: `2px solid ${getColorForDevice(location.device_id, allDevices)}`
+              }}
+            >
+              {location.device_id || 'N/A'}
+            </span>
           </div>
         </div>
 
@@ -274,19 +301,29 @@ const LocationInfo = ({ location, formatTimestamp, onOpenDateSearch }) => (
 );
 
 // --- Componente que actualiza la vista del mapa ---
-const MapUpdater = ({ position }) => {
+const MapUpdater = ({ bounds }) => {
   const map = useMap();
+  
   useEffect(() => {
-    map.flyTo(position, map.getZoom(), {
-      duration: 1.5,
-      easeLinearity: 0.25
-    });
-  }, [position, map]);
+    if (bounds && bounds.length > 0) {
+      // Si hay múltiples puntos, ajustar los límites
+      if (bounds.length > 1) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+      } else {
+        // Si solo hay un punto, hacer zoom normal
+        map.flyTo(bounds[0], 18, {
+          duration: 1.5,
+          easeLinearity: 0.25
+        });
+      }
+    }
+  }, [bounds, map]);
+  
   return null;
 };
 
 // --- Componente del Mapa ---
-const LocationMap = ({ location, formatTimestamp, path }) => {
+const LocationMap = ({ location, formatTimestamp, paths, allDevices }) => {
   const position = [parseFloat(location.latitude), parseFloat(location.longitude)];
 
   const customIcon = new Icon({
@@ -294,7 +331,9 @@ const LocationMap = ({ location, formatTimestamp, path }) => {
     iconSize: [70, 70]
   });
 
-  const polylineOptions = { color: '#110394', weight: 4 };
+  // Calcular bounds para todos los puntos de todos los paths
+  const allPoints = Object.values(paths).flat();
+  const bounds = allPoints.length > 0 ? allPoints : [position];
 
   return (
     <div className='glassmorphism-strong rounded-4xl backdrop-blur-lg shadow-lg p-4 max-w-4xl w-full mx-4'>
@@ -303,11 +342,11 @@ const LocationMap = ({ location, formatTimestamp, path }) => {
         zoom={18}
         style={{ height: '45rem', width: '100%', borderRadius: '1rem' }}
       >
-        {/* --- CAMBIO AQUÍ --- */}
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
+        
         <Marker position={position} icon={customIcon}>
           <Popup>
             <div className="text-center">
@@ -318,9 +357,39 @@ const LocationMap = ({ location, formatTimestamp, path }) => {
             </div>
           </Popup>
         </Marker>
-        <Polyline pathOptions={polylineOptions} positions={path} />
-        <MapUpdater position={position} />
+
+        {/* Renderizar polilíneas para cada dispositivo con su color */}
+        {Object.entries(paths).map(([deviceId, devicePath]) => (
+          <Polyline
+            key={deviceId}
+            pathOptions={{ 
+              color: getColorForDevice(deviceId, allDevices), 
+              weight: 4 
+            }}
+            positions={devicePath}
+          />
+        ))}
+
+        <MapUpdater bounds={bounds} />
       </MapContainer>
+
+      {/* Leyenda de dispositivos */}
+      {allDevices.length > 1 && (
+        <div className="mt-4 p-4 bg-white/10 rounded-xl">
+          <h3 className="text-white font-bold mb-2">Devices:</h3>
+          <div className="flex flex-wrap gap-2">
+            {allDevices.map((deviceId) => (
+              <div key={deviceId} className="flex items-center gap-2">
+                <div 
+                  className="w-4 h-4 rounded-full"
+                  style={{ backgroundColor: getColorForDevice(deviceId, allDevices) }}
+                />
+                <span className="text-white text-sm">{deviceId}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -330,9 +399,23 @@ function App() {
   const [locationData, setLocationData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [path, setPath] = useState([]);
+  const [paths, setPaths] = useState({}); // Cambio: almacenar paths por device_id
+  const [devices, setDevices] = useState([]);
   const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(true);
+
+  // Obtener lista de dispositivos
+  const fetchDevices = async () => {
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/api/devices`);
+      if (response.ok) {
+        const data = await response.json();
+        setDevices(data);
+      }
+    } catch (err) {
+      console.error('Error fetching devices:', err);
+    }
+  };
 
   const fetchLatestLocation = async () => {
     try {
@@ -349,15 +432,20 @@ function App() {
         const data = await response.json();
         setLocationData(data);
 
-        // --- LÓGICA PARA ACTUALIZAR LA TRAYECTORIA ---
         const newPosition = [parseFloat(data.latitude), parseFloat(data.longitude)];
-        // Evita añadir puntos duplicados si la ubicación no ha cambiado
-        setPath(prevPath => {
-          const lastPoint = prevPath[prevPath.length - 1];
+        const deviceId = data.device_id || 'unknown';
+
+        setPaths(prevPaths => {
+          const devicePath = prevPaths[deviceId] || [];
+          const lastPoint = devicePath[devicePath.length - 1];
+          
           if (!lastPoint || lastPoint[0] !== newPosition[0] || lastPoint[1] !== newPosition[1]) {
-            return [...prevPath, newPosition];
+            return {
+              ...prevPaths,
+              [deviceId]: [...devicePath, newPosition]
+            };
           }
-          return prevPath;
+          return prevPaths;
         });
 
         setError(null);
@@ -373,13 +461,16 @@ function App() {
   const handleDateSearch = async (searchData) => {
     console.log('Búsqueda por fecha iniciada:', searchData);
     setLoading(true);
-    setIsLiveMode(false); // Detenemos el modo en vivo
+    setIsLiveMode(false);
     setError(null);
 
     try {
-      const { startDate, endDate } = searchData;
-      // Construimos la URL con los parámetros de fecha
-      const response = await fetch(`${config.API_BASE_URL}/api/location/range?startDate=${startDate}&endDate=${endDate}`);
+      const { startDate, endDate, deviceId } = searchData;
+      const url = deviceId 
+        ? `${config.API_BASE_URL}/api/location/range?startDate=${startDate}&endDate=${endDate}&device_id=${deviceId}`
+        : `${config.API_BASE_URL}/api/location/range?startDate=${startDate}&endDate=${endDate}`;
+
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error('Error al obtener el historial de ubicaciones');
@@ -388,26 +479,34 @@ function App() {
       const historicalData = await response.json();
 
       if (historicalData.length > 0) {
-        // Creamos la nueva ruta para la polilínea
-        const newPath = historicalData.map(point => [
-          parseFloat(point.latitude),
-          parseFloat(point.longitude)
-        ]);
-        setPath(newPath);
+        // Agrupar datos por device_id
+        const pathsByDevice = {};
+        historicalData.forEach(point => {
+          const devId = point.device_id || 'unknown';
+          if (!pathsByDevice[devId]) {
+            pathsByDevice[devId] = [];
+          }
+          pathsByDevice[devId].push([
+            parseFloat(point.latitude),
+            parseFloat(point.longitude)
+          ]);
+        });
 
-        // Actualizamos la ubicación principal a la última del rango para centrar el mapa
+        setPaths(pathsByDevice);
+
+        // Actualizar ubicación principal a la última del rango
         const lastLocationInRange = historicalData[historicalData.length - 1];
         setLocationData({
           latitude: lastLocationInRange.latitude,
           longitude: lastLocationInRange.longitude,
-          timestamp_value: lastLocationInRange.timestamp_value
+          timestamp_value: lastLocationInRange.timestamp_value,
+          device_id: lastLocationInRange.device_id
         });
 
       } else {
-        // Si no hay datos, limpiamos la ruta y mostramos un mensaje
-        setPath([]);
+        setPaths({});
         setError('No hay datos de ubicación en este tiempo.');
-        setLocationData(null); // Opcional: limpiar la última ubicación conocida
+        setLocationData(null);
       }
 
     } catch (err) {
@@ -419,21 +518,22 @@ function App() {
   };
 
   useEffect(() => {
+    fetchDevices(); // Cargar dispositivos al inicio
+  }, []);
+
+  useEffect(() => {
     let interval;
     if (isLiveMode) {
-      // Cargar la ubicación más reciente solo al entrar en modo en vivo
       fetchLatestLocation();
-      // Activar el polling (actualización automática)
       interval = setInterval(fetchLatestLocation, config.POLLING_INTERVAL);
     }
 
-    // Esta función se ejecuta para limpiar el intervalo cuando el modo cambia
     return () => {
       if (interval) {
         clearInterval(interval);
       }
     };
-  }, [isLiveMode]); // <-- Añade isLiveMode como dependencia
+  }, [isLiveMode]);
 
   const formatTimestamp = (timestamp) => {
     const date = new Date(parseInt(timestamp));
@@ -454,8 +554,6 @@ function App() {
         </div>
       </div>
 
-
-
       <main className='flex flex-col md:flex-row items-center justify-center gap-8 max-w-[90%] mx-auto min-h-screen py-10'>
         {loading ? (
           <LoadingSpinner />
@@ -463,15 +561,14 @@ function App() {
           <ErrorMessage error={error} onRetry={isLiveMode ? fetchLatestLocation : () => window.location.reload()} retryText={isLiveMode ? "Reintentar" : "Volver al menú principal"} />
         ) : locationData ? (
           <>
-            {/* --- BOTÓN PARA VOLVER A MODO EN VIVO --- */}
             {!isLiveMode && (
               <div className="absolute top-40 left-1/2 -translate-x-1/2 z-40">
                 <button
                   onClick={() => {
                     setIsLiveMode(true);
-                    setPath([]); // Limpiamos la ruta histórica
+                    setPaths({});
                     setError(null);
-                    setLoading(true); // Mostramos spinner mientras carga la última ubicación
+                    setLoading(true);
                   }}
                   className="flex items-left gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white rounded-xl shadow-lg transition-all font-medium"
                 >
@@ -480,18 +577,24 @@ function App() {
               </div>
             )}
             <div className="w-full md:w-3/4 animate-slide-in-left interactive-glow rounded-4xl">
-              <LocationMap location={locationData} formatTimestamp={formatTimestamp} path={path} />
+              <LocationMap 
+                location={locationData} 
+                formatTimestamp={formatTimestamp} 
+                paths={paths}
+                allDevices={devices}
+              />
             </div>
             <div className="w-full md:w-1/4 flex flex-col gap-8 text-center animate-slide-in-right">
               <h1 className="font-bold text-7xl bg-gradient-to-r from-sky-400 to-cyan-300 text-transparent bg-clip-text" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {config.APP_NAME}
               </h1>
-            <LocationInfo
-              location={locationData}
-              formatTimestamp={formatTimestamp}
-              onOpenDateSearch={() => setIsDateSearchModalOpen(true)}
-            />
-          </div>
+              <LocationInfo
+                location={locationData}
+                formatTimestamp={formatTimestamp}
+                onOpenDateSearch={() => setIsDateSearchModalOpen(true)}
+                allDevices={devices}
+              />
+            </div>
           </>
         ) : (
           <div className="glassmorphism-strong min-w-[90%] mx-auto rounded-4xl p-8 text-center">
@@ -504,6 +607,7 @@ function App() {
         isOpen={isDateSearchModalOpen}
         onClose={() => setIsDateSearchModalOpen(false)}
         onSearch={handleDateSearch}
+        devices={devices}
       />
     </div>
   );
