@@ -382,7 +382,7 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
   };
 
   return (
-    <div className='glassmorphism-strong rounded-4xl backdrop-blur-lg shadow-lg p-4 max-w-4xl w-full mx-4'>
+    <div className='glassmorphism-strong rounded-4xl backdrop-blur-lg shadow-lg p-4 w-full mx-4'>
       <MapContainer
         center={position}
         zoom={18}
@@ -690,7 +690,7 @@ function App() {
                 </button>
               </div>
             )}
-            <div className="w-full animate-slide-in-left interactive-glow rounded-4xl">
+            <div className="w-full md:w-3/4 animate-slide-in-left interactive-glow rounded-4xl">
               <LocationMap 
                 locations={locationsData}
                 formatTimestamp={formatTimestamp} 
