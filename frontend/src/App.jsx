@@ -21,7 +21,7 @@ const config = {
   APP_SUBTITLE: '',
   APP_VERSION: '2.0.0',
   POLLING_INTERVAL: import.meta.env.VITE_POLLING_INTERVAL || 5000,
-  DEVICE_TIMEOUT: 20000, // 20 segundos en milisegundos
+  DEVICE_TIMEOUT: 30000, // 30 segundos en milisegundos
 };
 
 // Arreglo para el ícono por defecto de Leaflet en Vite
@@ -690,7 +690,7 @@ function App() {
                 </button>
               </div>
             )}
-            <div className="w-full md:w-3/4 animate-slide-in-left interactive-glow rounded-4xl">
+            <div className="w-full animate-slide-in-left interactive-glow rounded-4xl">
               <LocationMap 
                 locations={locationsData}
                 formatTimestamp={formatTimestamp} 
