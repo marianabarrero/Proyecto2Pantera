@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
+import { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L, { Icon } from 'leaflet';
 import { ThreeDot } from 'react-loading-indicators';
@@ -304,7 +304,7 @@ const LocationInfo = ({ locations, formatTimestamp, onOpenDateSearch, allDevices
         </div>
         <button
           onClick={onOpenDateSearch}
-          className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-800 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-sky-600 to-sky-700 text-white hover:from-sky-700 hover:to-sky-800 px-20 py-3 md:px-20 md:py-2 text-base md:text-lg mt-2 mx-auto'
+          className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent'
         >
           <span className='group-hover:text-white/90 duration-300'>Search by Date</span>
         </button>
@@ -314,11 +314,12 @@ const LocationInfo = ({ locations, formatTimestamp, onOpenDateSearch, allDevices
 };
 
 // --- Componente que actualiza la vista del mapa ---
-const MapUpdater = ({ bounds }) => {
+const MapUpdater = ({ bounds, hasUserInteracted }) => {
   const map = useMap();
   
   useEffect(() => {
-    if (bounds && bounds.length > 0) {
+    // Solo ajustar el zoom si el usuario NO ha interactuado con el mapa
+    if (bounds && bounds.length > 0 && !hasUserInteracted) {
       // Si hay múltiples puntos, ajustar los límites
       if (bounds.length > 1) {
         try {
@@ -334,27 +335,47 @@ const MapUpdater = ({ bounds }) => {
         });
       }
     }
-  }, [bounds, map]);
+  }, [bounds, map, hasUserInteracted]);
   
   return null;
 };
 
 // --- Componente del Mapa ---
 const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  
   // Usar la primera ubicación como centro inicial
   const centerLocation = locations[0] || { latitude: 40.7128, longitude: -74.0060 };
   const position = [parseFloat(centerLocation.latitude), parseFloat(centerLocation.longitude)];
-
-  const customIcon = new Icon({
-    iconUrl: "/icon.png",
-    iconSize: [70, 70]
-  });
 
   // Calcular bounds para todos los puntos de todos los paths Y todas las ubicaciones actuales
   const allPathPoints = Object.values(paths).flat();
   const currentLocationPoints = locations.map(loc => [parseFloat(loc.latitude), parseFloat(loc.longitude)]);
   const allPoints = [...allPathPoints, ...currentLocationPoints];
   const bounds = allPoints.length > 0 ? allPoints : [position];
+
+  // Componente interno para detectar interacciones del usuario
+  const InteractionDetector = () => {
+    const map = useMap();
+    
+    useEffect(() => {
+      const handleInteraction = () => {
+        setHasUserInteracted(true);
+      };
+
+      // Detectar zoom manual
+      map.on('zoomstart', handleInteraction);
+      // Detectar movimiento del mapa
+      map.on('dragstart', handleInteraction);
+
+      return () => {
+        map.off('zoomstart', handleInteraction);
+        map.off('dragstart', handleInteraction);
+      };
+    }, [map]);
+
+    return null;
+  };
 
   return (
     <div className='glassmorphism-strong rounded-4xl backdrop-blur-lg shadow-lg p-4 max-w-4xl w-full mx-4'>
@@ -368,11 +389,24 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
-        {/* Renderizar marcadores para CADA dispositivo activo */}
+        {/* Renderizar marcadores circulares para CADA dispositivo activo */}
         {locations.map((location, index) => {
           const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
+          const deviceColor = getColorForDevice(location.device_id, allDevices);
+          
           return (
-            <Marker key={location.device_id || index} position={markerPosition} icon={customIcon}>
+            <CircleMarker 
+              key={location.device_id || index} 
+              center={markerPosition}
+              radius={12}
+              pathOptions={{
+                fillColor: deviceColor,
+                fillOpacity: 0.9,
+                color: deviceColor,
+                weight: 3,
+                opacity: 1
+              }}
+            >
               <Popup>
                 <div className="text-center">
                   <strong>{location.device_id || 'Device'}</strong><br />
@@ -381,7 +415,7 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
                   <small>Lng: {parseFloat(location.longitude).toFixed(6)}</small>
                 </div>
               </Popup>
-            </Marker>
+            </CircleMarker>
           );
         })}
 
@@ -400,7 +434,8 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
           );
         })}
 
-        <MapUpdater bounds={bounds} />
+        <MapUpdater bounds={bounds} hasUserInteracted={hasUserInteracted} />
+        <InteractionDetector />
       </MapContainer>
 
       {/* Leyenda de dispositivos */}
