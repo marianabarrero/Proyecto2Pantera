@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker, Rectangle, FeatureGroup } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker, Rectangle, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
 import L, { Icon } from 'leaflet';
 import { ThreeDot } from 'react-loading-indicators';
 
@@ -23,7 +21,7 @@ const config = {
   APP_SUBTITLE: '',
   APP_VERSION: '2.0.0',
   POLLING_INTERVAL: import.meta.env.VITE_POLLING_INTERVAL || 5000,
-  DEVICE_TIMEOUT: 30000, // 30 segundos en milisegundos
+  DEVICE_TIMEOUT: 30000,
 };
 
 // Arreglo para el ícono por defecto de Leaflet en Vite
@@ -36,46 +34,143 @@ L.Icon.Default.mergeOptions({
 
 // Paleta de colores para diferentes dispositivos
 const DEVICE_COLORS = [
-  '#110394', // Azul oscuro
-  '#FF6B6B', // Rojo
-  '#4ECDC4', // Turquesa
-  '#FFD93D', // Amarillo
-  '#95E1D3', // Verde menta
-  '#F38181', // Rosa
-  '#AA96DA', // Púrpura
-  '#FCBAD3', // Rosa claro
+  '#110394',
+  '#FF6B6B',
+  '#4ECDC4',
+  '#FFD93D',
+  '#95E1D3',
+  '#F38181',
+  '#AA96DA',
+  '#FCBAD3',
 ];
 
 // Colores para diferentes recorridos
 const JOURNEY_COLORS = [
-  '#FF0000', // Rojo
-  '#00FF00', // Verde
-  '#0000FF', // Azul
-  '#FFFF00', // Amarillo
-  '#FF00FF', // Magenta
-  '#00FFFF', // Cyan
-  '#FFA500', // Naranja
-  '#800080', // Púrpura
-  '#008080', // Teal
-  '#FFC0CB', // Rosa
+  '#FF0000',
+  '#00FF00',
+  '#0000FF',
+  '#FFFF00',
+  '#FF00FF',
+  '#00FFFF',
+  '#FFA500',
+  '#800080',
+  '#008080',
+  '#FFC0CB',
 ];
 
-// Función para obtener color según device_id
 const getColorForDevice = (deviceId, allDevices) => {
   if (!deviceId) return DEVICE_COLORS[0];
   const index = allDevices.indexOf(deviceId);
   return DEVICE_COLORS[index % DEVICE_COLORS.length];
 };
 
-// Función para verificar si un dispositivo está activo (últimos 30 segundos)
 const isDeviceActive = (timestamp) => {
   const now = Date.now();
   const deviceTime = parseInt(timestamp);
   return (now - deviceTime) <= config.DEVICE_TIMEOUT;
 };
 
-// --- Componentes de UI ---
+// --- Componente para dibujar rectángulos CON BLOQUEO DEL MAPA ---
+const RectangleDrawer = ({ onRectangleComplete }) => {
+  const [startPoint, setStartPoint] = useState(null);
+  const [currentPoint, setCurrentPoint] = useState(null);
+  const map = useMap();
 
+  useEffect(() => {
+    // Cuando se inicia el dibujo, deshabilitar el arrastre del mapa
+    if (startPoint) {
+      map.dragging.disable();
+      map.doubleClickZoom.disable();
+      map.scrollWheelZoom.disable();
+      map.boxZoom.disable();
+      map.keyboard.disable();
+      
+      // Cambiar cursor
+      map.getContainer().style.cursor = 'crosshair';
+    } else {
+      // Cuando termina el dibujo, habilitar de nuevo
+      map.dragging.enable();
+      map.doubleClickZoom.enable();
+      map.scrollWheelZoom.enable();
+      map.boxZoom.enable();
+      map.keyboard.enable();
+      
+      // Restaurar cursor
+      map.getContainer().style.cursor = '';
+    }
+
+    return () => {
+      // Cleanup: asegurarse de que el mapa quede habilitado
+      map.dragging.enable();
+      map.doubleClickZoom.enable();
+      map.scrollWheelZoom.enable();
+      map.boxZoom.enable();
+      map.keyboard.enable();
+      map.getContainer().style.cursor = '';
+    };
+  }, [startPoint, map]);
+
+  useMapEvents({
+    click(e) {
+      if (!startPoint) {
+        setStartPoint(e.latlng);
+      } else {
+        const bounds = L.latLngBounds(startPoint, e.latlng);
+        onRectangleComplete({
+          minLat: bounds.getSouth(),
+          maxLat: bounds.getNorth(),
+          minLng: bounds.getWest(),
+          maxLng: bounds.getEast()
+        });
+        setStartPoint(null);
+        setCurrentPoint(null);
+      }
+    },
+    mousemove(e) {
+      if (startPoint) {
+        setCurrentPoint(e.latlng);
+      }
+    },
+    // Permitir cancelar con clic derecho o tecla ESC
+    contextmenu(e) {
+      e.originalEvent.preventDefault();
+      setStartPoint(null);
+      setCurrentPoint(null);
+    }
+  });
+
+  // Escuchar tecla ESC para cancelar
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && startPoint) {
+        setStartPoint(null);
+        setCurrentPoint(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [startPoint]);
+
+  if (startPoint && currentPoint) {
+    const bounds = L.latLngBounds(startPoint, currentPoint);
+    return (
+      <Rectangle
+        bounds={bounds}
+        pathOptions={{
+          color: '#3388ff',
+          weight: 2,
+          fillOpacity: 0.2,
+          dashArray: '5, 5'
+        }}
+      />
+    );
+  }
+
+  return null;
+};
+
+// --- Componentes de UI ---
 const LoadingSpinner = () => (
   <div className="flex items-center mx-auto justify-center p-8">
     <ThreeDot color="#FFFFFF" size="medium" text="" textColor="" />
@@ -94,7 +189,7 @@ const ErrorMessage = ({ error, onRetry }) => (
   </div>
 );
 
-// --- Modal de Selección de Dispositivo para Travel Record ---
+// --- Modal de Selección de Dispositivo ---
 const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
   const [selectedDevice, setSelectedDevice] = useState('');
 
@@ -113,7 +208,7 @@ const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
       <div className="relative glassmorphism-strong rounded-4xl p-8 mx-4 w-full max-w-md transform">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-white">Select Device</h2>
-          <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1">
+          <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1 text-2xl">
             ✕
           </button>
         </div>
@@ -154,7 +249,7 @@ const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
   );
 };
 
-// --- Modal de Búsqueda con MUI DateTimePicker ---
+// --- Modal de Búsqueda por Fecha ---
 const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -162,7 +257,6 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Tema oscuro para los componentes de MUI
   const darkTheme = createTheme({
     palette: {
       mode: 'dark',
@@ -245,15 +339,11 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative glassmorphism-strong rounded-4xl p-8 mx-4 w-full max-w-5xl transform">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-white">Select Date Range</h2>
-          <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1">
+          <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1 text-2xl">
             ✕
           </button>
         </div>
@@ -278,7 +368,6 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
           </LocalizationProvider>
         </ThemeProvider>
 
-        {/* Selector de dispositivo */}
         {devices.length > 0 && (
           <div className="mt-6">
             <label className="block text-white mb-2">Filter by Device:</label>
@@ -324,7 +413,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
   );
 };
 
-// --- Componente de Lista de Dispositivos ---
+// --- Lista de Dispositivos ---
 const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord }) => {
   return (
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong'>
@@ -348,7 +437,6 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
                   className="flex items-center justify-between gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    {/* Indicador de estado (verde = activo, rojo = inactivo) */}
                     <div 
                       className={`w-3 h-3 rounded-full ${isActive ? 'bg-green-500' : 'bg-red-500'} shadow-lg`}
                       style={{
@@ -357,14 +445,11 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
                           : '0 0 10px rgba(239, 68, 68, 0.6)'
                       }}
                     />
-                    
-                    {/* Nombre del dispositivo */}
                     <span className="text-white font-mono text-sm">
                       {device.device_id}
                     </span>
                   </div>
 
-                  {/* Badge de estado */}
                   <span 
                     className={`text-xs px-2 py-1 rounded-full font-medium ${
                       isActive 
@@ -398,14 +483,12 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
   );
 };
 
-// --- Componente que actualiza la vista del mapa ---
+// --- Map Updater ---
 const MapUpdater = ({ bounds, hasUserInteracted }) => {
   const map = useMap();
   
   useEffect(() => {
-    // Solo ajustar el zoom si el usuario NO ha interactuado con el mapa
     if (bounds && bounds.length > 0 && !hasUserInteracted) {
-      // Si hay múltiples puntos, ajustar los límites
       if (bounds.length > 1) {
         try {
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
@@ -413,7 +496,6 @@ const MapUpdater = ({ bounds, hasUserInteracted }) => {
           console.error('Error ajustando bounds:', e);
         }
       } else {
-        // Si solo hay un punto, hacer zoom normal
         map.flyTo(bounds[0], 18, {
           duration: 1.5,
           easeLinearity: 0.25
@@ -438,17 +520,14 @@ const LocationMap = ({
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   
-  // Usar la primera ubicación como centro inicial, o coordenadas por defecto
   const centerLocation = locations.length > 0 
     ? locations[0] 
     : { latitude: 40.7128, longitude: -74.0060 };
   const position = [parseFloat(centerLocation.latitude), parseFloat(centerLocation.longitude)];
 
-  // Calcular bounds para todos los puntos de todos los paths Y todas las ubicaciones actuales
   const allPathPoints = Object.values(paths).flat();
   const currentLocationPoints = locations.map(loc => [parseFloat(loc.latitude), parseFloat(loc.longitude)]);
   
-  // Si hay journeys, agregar esos puntos también
   let journeyPoints = [];
   if (journeys.length > 0) {
     journeys.forEach(journey => {
@@ -461,7 +540,6 @@ const LocationMap = ({
   const allPoints = [...allPathPoints, ...currentLocationPoints, ...journeyPoints];
   const bounds = allPoints.length > 0 ? allPoints : [position];
 
-  // Componente interno para detectar interacciones del usuario
   const InteractionDetector = () => {
     const map = useMap();
     
@@ -470,9 +548,7 @@ const LocationMap = ({
         setHasUserInteracted(true);
       };
 
-      // Detectar zoom manual
       map.on('zoomstart', handleInteraction);
-      // Detectar movimiento del mapa
       map.on('dragstart', handleInteraction);
 
       return () => {
@@ -484,22 +560,18 @@ const LocationMap = ({
     return null;
   };
 
-  const handleCreated = (e) => {
-    const { layer } = e;
-    if (layer instanceof L.Rectangle) {
-      const bounds = layer.getBounds();
-      const area = {
-        minLat: bounds.getSouth(),
-        maxLat: bounds.getNorth(),
-        minLng: bounds.getWest(),
-        maxLng: bounds.getEast()
-      };
-      onAreaDrawn(area);
-    }
-  };
-
   return (
     <div className='glassmorphism-strong rounded-4xl backdrop-blur-lg shadow-lg p-4 w-full mx-4'>
+      {travelRecordMode && (
+        <div className="mb-2 p-3 bg-sky-500/20 border border-sky-500/50 rounded-xl">
+          <p className="text-white text-sm text-center">
+            📍 <strong>Click twice on the map to draw a rectangle.</strong> First click = start corner, second click = end corner.
+            <br/>
+            <span className="text-xs text-white/70">Press ESC or right-click to cancel.</span>
+          </p>
+        </div>
+      )}
+
       <MapContainer
         center={position}
         zoom={18}
@@ -510,29 +582,8 @@ const LocationMap = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
-        {/* Modo Travel Record con herramientas de dibujo */}
-        {travelRecordMode && (
-          <FeatureGroup>
-            <EditControl
-              position="topright"
-              onCreated={handleCreated}
-              draw={{
-                rectangle: true,
-                circle: false,
-                circlemarker: false,
-                marker: false,
-                polyline: false,
-                polygon: false,
-              }}
-              edit={{
-                edit: false,
-                remove: false,
-              }}
-            />
-          </FeatureGroup>
-        )}
+        {travelRecordMode && <RectangleDrawer onRectangleComplete={onAreaDrawn} />}
 
-        {/* Renderizar journeys si existen */}
         {journeys.length > 0 && journeys.map((journey, index) => (
           <Polyline
             key={`journey-${index}`}
@@ -545,7 +596,6 @@ const LocationMap = ({
           />
         ))}
         
-        {/* Renderizar marcadores circulares para CADA dispositivo activo solo si NO estamos en modo travel record */}
         {!travelRecordMode && locations.map((location, index) => {
           const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
           const activeDeviceIds = locations.map(loc => loc.device_id);
@@ -576,7 +626,6 @@ const LocationMap = ({
           );
         })}
 
-        {/* Renderizar polilíneas para cada dispositivo con su color solo si NO estamos en modo travel record */}
         {!travelRecordMode && Object.entries(paths).map(([deviceId, devicePath]) => {
           if (devicePath.length === 0) return null;
           const activeDeviceIds = locations.map(loc => loc.device_id);
@@ -596,7 +645,6 @@ const LocationMap = ({
         <InteractionDetector />
       </MapContainer>
 
-      {/* Leyenda de dispositivos activos solo si NO estamos en modo travel record */}
       {!travelRecordMode && locations.length > 1 && (
         <div className="mt-4 p-4 bg-white/10 rounded-xl">
           <h3 className="text-white font-bold mb-2">Active Devices:</h3>
@@ -614,9 +662,8 @@ const LocationMap = ({
         </div>
       )}
 
-      {/* Leyenda de recorridos cuando hay journeys */}
       {journeys.length > 0 && (
-        <div className="mt-4 p-4 bg-white/10 rounded-xl">
+        <div className="mt-4 p-4 bg-white/10 rounded-xl max-h-64 overflow-y-auto">
           <h3 className="text-white font-bold mb-3">Travel Records for {travelRecordDevice}:</h3>
           <div className="space-y-2">
             {journeys.map((journey, index) => {
@@ -654,30 +701,27 @@ const LocationMap = ({
   );
 };
 
-// --- Componente Principal ---
+// --- App Principal ---
 function App() {
-  const [locationsData, setLocationsData] = useState([]); // Array de ubicaciones activas
+  const [locationsData, setLocationsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [paths, setPaths] = useState({});
-  const [allDevices, setAllDevices] = useState([]); // Todos los dispositivos registrados
-  const [activeDeviceIds, setActiveDeviceIds] = useState([]); // IDs de dispositivos activos
+  const [allDevices, setAllDevices] = useState([]);
+  const [activeDeviceIds, setActiveDeviceIds] = useState([]);
   const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(true);
   
-  // Estados para Travel Record
   const [travelRecordMode, setTravelRecordMode] = useState(false);
   const [isDeviceSelectionModalOpen, setIsDeviceSelectionModalOpen] = useState(false);
   const [selectedDeviceForTravel, setSelectedDeviceForTravel] = useState(null);
   const [journeys, setJourneys] = useState([]);
 
-  // Obtener lista de TODOS los dispositivos registrados en la plataforma
   const fetchAllDevices = async () => {
     try {
       const response = await fetch(`${config.API_BASE_URL}/api/devices`);
       if (response.ok) {
         const data = await response.json();
-        // Asegurarse de que data sea un array de objetos con device_id
         const devicesArray = Array.isArray(data) 
           ? data.map(d => typeof d === 'string' ? { device_id: d } : d)
           : [];
@@ -688,12 +732,10 @@ function App() {
     }
   };
 
-  // Filtrar dispositivos activos (últimos 30 segundos)
   const filterActiveDevices = (locations) => {
     return locations.filter(location => isDeviceActive(location.timestamp_value));
   };
 
-  // Limpiar paths de dispositivos inactivos
   const cleanInactivePaths = (activeDeviceIds) => {
     setPaths(prevPaths => {
       const newPaths = {};
@@ -706,7 +748,6 @@ function App() {
     });
   };
 
-  // Obtener ubicaciones de TODOS los dispositivos y filtrar activos
   const fetchLatestLocations = async () => {
     try {
       const response = await fetch(`${config.API_BASE_URL}/api/location/latest-by-devices`);
@@ -721,18 +762,14 @@ function App() {
       } else {
         const data = await response.json();
         
-        // Filtrar solo dispositivos activos (últimos 30 segundos)
         const activeLocations = filterActiveDevices(data);
         setLocationsData(activeLocations);
 
-        // Actualizar lista de dispositivos activos (solo IDs)
         const activeIds = activeLocations.map(loc => loc.device_id || 'unknown');
         setActiveDeviceIds(activeIds);
 
-        // Limpiar paths de dispositivos inactivos
         cleanInactivePaths(activeIds);
 
-        // Actualizar paths solo para dispositivos activos
         setPaths(prevPaths => {
           const newPaths = { ...prevPaths };
           
@@ -761,7 +798,6 @@ function App() {
   };
 
   const handleDateSearch = async (searchData) => {
-    console.log('Búsqueda por fecha iniciada:', searchData);
     setLoading(true);
     setIsLiveMode(false);
     setError(null);
@@ -781,7 +817,6 @@ function App() {
       const historicalData = await response.json();
 
       if (historicalData.length > 0) {
-        // Agrupar datos por device_id
         const pathsByDevice = {};
         const locationsByDevice = {};
         
@@ -795,17 +830,14 @@ function App() {
             parseFloat(point.longitude)
           ]);
           
-          // Guardar la última ubicación de cada dispositivo
           locationsByDevice[devId] = point;
         });
 
         setPaths(pathsByDevice);
         
-        // Convertir a array para mostrar todos los dispositivos
         const allLocations = Object.values(locationsByDevice);
         setLocationsData(allLocations);
         
-        // Actualizar active devices con los del historial
         setActiveDeviceIds(Object.keys(locationsByDevice));
 
       } else {
@@ -823,23 +855,19 @@ function App() {
     }
   };
 
-  // Función para iniciar el modo Travel Record
   const handleOpenTravelRecord = () => {
     setIsDeviceSelectionModalOpen(true);
   };
 
-  // Función cuando se selecciona un dispositivo
   const handleDeviceSelected = (deviceId) => {
     setSelectedDeviceForTravel(deviceId);
     setTravelRecordMode(true);
     setIsLiveMode(false);
     setJourneys([]);
-    // Limpiar el mapa
     setLocationsData([]);
     setPaths({});
   };
 
-  // Función cuando se dibuja un área
   const handleAreaDrawn = async (area) => {
     if (!selectedDeviceForTravel) return;
 
@@ -870,7 +898,6 @@ function App() {
     }
   };
 
-  // Función para salir del modo Travel Record
   const handleExitTravelRecord = () => {
     setTravelRecordMode(false);
     setSelectedDeviceForTravel(null);
@@ -889,7 +916,7 @@ function App() {
       fetchLatestLocations();
       interval = setInterval(() => {
         fetchLatestLocations();
-        fetchAllDevices(); // Actualizar lista de todos los dispositivos
+        fetchAllDevices();
       }, config.POLLING_INTERVAL);
     }
 
