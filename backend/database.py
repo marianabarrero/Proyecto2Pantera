@@ -16,11 +16,9 @@ class Database:
             database=os.getenv('DB_NAME'),
             user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASSWORD'),
-            min_size=5,
-            max_size=20,
-            command_timeout=60
+            ssl='require'
         )
-        print("Pool de conexiones inicializado")
+        print("Pool de conexiones PostgreSQL inicializado")
 
     async def close_connection_pool(self):
         """Cierra el pool de conexiones"""
@@ -56,25 +54,26 @@ class Database:
     async def insert_location(self, data):
         """Inserta una nueva ubicación"""
         query = """
-        INSERT INTO location_data 
+        INSERT INTO location_data
         (latitude, longitude, timestamp_value, accuracy, altitude, speed, provider, device_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id;
         """
 
+        values = [
+            data.get('lat'),
+            data.get('lon'),
+            data.get('time'),
+            data.get('acc'),
+            data.get('alt'),
+            data.get('spd'),
+            data.get('prov'),
+            data.get('deviceId')
+        ]
+
         async with self.pool.acquire() as connection:
-            result = await connection.fetchval(
-                query,
-                data['latitude'],
-                data['longitude'],
-                data['timestamp_value'],
-                data.get('accuracy'),
-                data.get('altitude'),
-                data.get('speed'),
-                data.get('provider'),
-                data.get('device_id')
-            )
-            return result
+            record = await connection.fetchrow(query, *values)
+            return record['id']
 
     async def get_latest_location(self, device_id=None):
         """Obtiene la última ubicación, opcionalmente filtrada por device_id"""
@@ -99,6 +98,20 @@ class Database:
             async with self.pool.acquire() as connection:
                 record = await connection.fetchrow(query)
                 return dict(record) if record else None
+
+    async def get_latest_location_by_devices(self):
+        """Obtiene la última ubicación de cada dispositivo único"""
+        query = """
+        SELECT DISTINCT ON (device_id) 
+            latitude, longitude, timestamp_value, created_at, device_id
+        FROM location_data
+        WHERE device_id IS NOT NULL
+        ORDER BY device_id, id DESC;
+        """
+        
+        async with self.pool.acquire() as connection:
+            records = await connection.fetch(query)
+            return [dict(record) for record in records]
 
     async def get_all_locations(self, limit=100, device_id=None):
         """Obtiene todas las ubicaciones con límite, opcionalmente filtradas por device_id"""

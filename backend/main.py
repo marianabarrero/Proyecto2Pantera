@@ -74,6 +74,20 @@ async def get_latest_location(device_id: str = Query(None, description="ID del d
         print(f"Error obteniendo último registro: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
+@app.get("/api/location/latest-by-devices", response_model=list[LocationResponse])
+async def get_latest_by_devices():
+    """Endpoint para obtener la última ubicación de CADA dispositivo"""
+    try:
+        results = await db.get_latest_location_by_devices()
+        if not results:
+            raise HTTPException(status_code=404, detail="No hay datos disponibles")
+        return [LocationResponse(**result) for result in results]
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error obteniendo últimas ubicaciones por dispositivo: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
+
 @app.get("/api/location/all", response_model=list[AllLocationsResponse])
 async def get_all_locations(
     limit: int = Query(default=100, ge=1, le=1000),
