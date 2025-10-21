@@ -21,6 +21,7 @@ const config = {
   APP_SUBTITLE: '',
   APP_VERSION: '2.0.0',
   POLLING_INTERVAL: import.meta.env.VITE_POLLING_INTERVAL || 5000,
+  DEVICE_TIMEOUT: 20000, // 20 segundos en milisegundos
 };
 
 // Arreglo para el ícono por defecto de Leaflet en Vite
@@ -48,6 +49,13 @@ const getColorForDevice = (deviceId, allDevices) => {
   if (!deviceId) return DEVICE_COLORS[0];
   const index = allDevices.indexOf(deviceId);
   return DEVICE_COLORS[index % DEVICE_COLORS.length];
+};
+
+// Función para verificar si un dispositivo está activo (últimos 20 segundos)
+const isDeviceActive = (timestamp) => {
+  const now = Date.now();
+  const deviceTime = parseInt(timestamp);
+  return (now - deviceTime) <= config.DEVICE_TIMEOUT;
 };
 
 // --- Componentes de UI ---
@@ -461,7 +469,7 @@ const LocationMap = ({ locations, formatTimestamp, paths, allDevices }) => {
 
 // --- Componente Principal ---
 function App() {
-  const [locationsData, setLocationsData] = useState([]); // CAMBIO: Array de ubicaciones
+  const [locationsData, setLocationsData] = useState([]); // Array de ubicaciones activas
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [paths, setPaths] = useState({});
@@ -469,7 +477,7 @@ function App() {
   const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(true);
 
-  // Obtener lista de dispositivos
+  // Obtener lista de dispositivos activos
   const fetchDevices = async () => {
     try {
       const response = await fetch(`${config.API_BASE_URL}/api/devices`);
@@ -482,7 +490,25 @@ function App() {
     }
   };
 
-  // MODIFICADO: Obtener ubicaciones de TODOS los dispositivos
+  // Filtrar dispositivos activos (últimos 20 segundos)
+  const filterActiveDevices = (locations) => {
+    return locations.filter(location => isDeviceActive(location.timestamp_value));
+  };
+
+  // Limpiar paths de dispositivos inactivos
+  const cleanInactivePaths = (activeDeviceIds) => {
+    setPaths(prevPaths => {
+      const newPaths = {};
+      activeDeviceIds.forEach(deviceId => {
+        if (prevPaths[deviceId]) {
+          newPaths[deviceId] = prevPaths[deviceId];
+        }
+      });
+      return newPaths;
+    });
+  };
+
+  // MODIFICADO: Obtener ubicaciones de TODOS los dispositivos y filtrar activos
   const fetchLatestLocations = async () => {
     try {
       const response = await fetch(`${config.API_BASE_URL}/api/location/latest-by-devices`);
@@ -496,13 +522,23 @@ function App() {
         }
       } else {
         const data = await response.json();
-        setLocationsData(data);
+        
+        // Filtrar solo dispositivos activos (últimos 20 segundos)
+        const activeLocations = filterActiveDevices(data);
+        setLocationsData(activeLocations);
 
-        // Actualizar paths para cada dispositivo
+        // Actualizar lista de dispositivos activos
+        const activeDeviceIds = activeLocations.map(loc => loc.device_id || 'unknown');
+        setDevices(activeDeviceIds);
+
+        // Limpiar paths de dispositivos inactivos
+        cleanInactivePaths(activeDeviceIds);
+
+        // Actualizar paths solo para dispositivos activos
         setPaths(prevPaths => {
           const newPaths = { ...prevPaths };
           
-          data.forEach(location => {
+          activeLocations.forEach(location => {
             const deviceId = location.device_id || 'unknown';
             const newPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
             const devicePath = newPaths[deviceId] || [];
@@ -568,12 +604,17 @@ function App() {
         setPaths(pathsByDevice);
         
         // Convertir a array para mostrar todos los dispositivos
-        setLocationsData(Object.values(locationsByDevice));
+        const allLocations = Object.values(locationsByDevice);
+        setLocationsData(allLocations);
+        
+        // Actualizar devices con los del historial
+        setDevices(Object.keys(locationsByDevice));
 
       } else {
         setPaths({});
         setError('No hay datos de ubicación en este tiempo.');
         setLocationsData([]);
+        setDevices([]);
       }
 
     } catch (err) {
