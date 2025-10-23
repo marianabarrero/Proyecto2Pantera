@@ -173,9 +173,10 @@ class Database:
     async def get_locations_in_area(self, min_lat, max_lat, min_lng, max_lng, device_id):
         """Obtiene ubicaciones de un dispositivo dentro de un área rectangular"""
         query = """
-        SELECT latitude, longitude, timestamp_value, created_at
+        SELECT latitude, longitude, timestamp_value, created_at, device_id
         FROM location_data
-        WHERE latitude BETWEEN $2 AND $3
+        WHERE device_id = $1
+        AND latitude BETWEEN $2 AND $3
         AND longitude BETWEEN $4 AND $5
         ORDER BY timestamp_value ASC;
         """
