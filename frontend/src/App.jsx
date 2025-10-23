@@ -189,7 +189,7 @@ const ErrorMessage = ({ error, onRetry }) => (
   </div>
 );
 
-// --- Modal de Selección de Dispositivo ---
+// --- Modal de Selección de Dispositivo  ---
 const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
   const [selectedDevice, setSelectedDevice] = useState('');
 
