@@ -494,6 +494,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
 
 // --- Lista de Dispositivos ---
 // --- Lista de Dispositivos ---
+// --- Lista de Dispositivos ---
 const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord, onDeviceClick, isLiveMode }) => {
   return (
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong'>
@@ -508,42 +509,66 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
           </div>
         ) : (
           <div className="space-y-3">
-            {allDevices.map((device) => {
+            {allDevices.map((device, index) => {
               const isActive = activeDeviceIds.includes(device.device_id);
               const isClickable = !isLiveMode && isActive;
+              const deviceColor = getColorForDevice(device.device_id, activeDeviceIds);
 
               return (
                 <div
                   key={device.device_id}
                   onClick={() => isClickable ? onDeviceClick(device.device_id) : null}
-                  className={`flex items-center justify-between gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all ${
-                    isClickable ? 'cursor-pointer hover:scale-105 hover:shadow-lg hover:bg-sky-500/20' : ''
+                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                    isClickable ? 'cursor-pointer hover:scale-105 hover:shadow-lg' : ''
                   }`}
+                  style={{
+                    background: isClickable 
+                      ? `linear-gradient(135deg, ${deviceColor}15, ${deviceColor}25)` 
+                      : 'rgba(255, 255, 255, 0.05)',
+                    border: isClickable 
+                      ? `2px solid ${deviceColor}60` 
+                      : '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: isClickable 
+                      ? `0 0 15px ${deviceColor}40` 
+                      : 'none'
+                  }}
                   title={isClickable ? 'Click to zoom to device path' : ''}
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-3 h-3 rounded-full ${isActive ? 'bg-green-500' : 'bg-red-500'} shadow-lg`}
+                      className={`w-4 h-4 rounded-full shadow-lg`}
                       style={{
+                        backgroundColor: isActive ? deviceColor : '#ef4444',
                         boxShadow: isActive
-                          ? '0 0 10px rgba(34, 197, 94, 0.6)'
+                          ? `0 0 15px ${deviceColor}80, 0 0 25px ${deviceColor}40`
                           : '0 0 10px rgba(239, 68, 68, 0.6)'
                       }}
                     />
-                    <span className="text-white font-mono text-sm">
+                    <span className="text-white font-mono text-sm font-medium">
                       {device.device_id}
                     </span>
                   </div>
 
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      isActive
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-red-500/20 text-red-400'
-                    }`}
-                  >
-                    {isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {isActive && !isLiveMode && (
+                      <div 
+                        className="w-6 h-1 rounded-full"
+                        style={{ 
+                          backgroundColor: deviceColor,
+                          boxShadow: `0 0 8px ${deviceColor}`
+                        }}
+                      />
+                    )}
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        isActive
+                          ? 'bg-green-500/20 text-green-400'
+                          : 'bg-red-500/20 text-red-400'
+                      }`}
+                    >
+                      {isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
                 </div>
               );
             })}
