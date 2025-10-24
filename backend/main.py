@@ -1,28 +1,24 @@
 import asyncio
 import os
 import json
-from backend.models import (
-    LocationData, LocationResponse, AllLocationsResponse, 
-    HealthResponse, ErrorResponse, InternalErrorResponse,
-    GeofenceCreate, GeofenceResponse, GeofenceJourney, GeofenceWithJourneys
-)
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from database import db
+from database import Database
 from udp_server import start_udp_server, stop_udp_server
 from models import (
-    LocationResponse,
-    AllLocationsResponse,
-    HealthResponse,
-    ErrorResponse,
-    InternalErrorResponse
+    LocationData, LocationResponse, AllLocationsResponse, 
+    HealthResponse, ErrorResponse, InternalErrorResponse,
+    GeofenceCreate, GeofenceResponse, GeofenceJourney, GeofenceWithJourneys
 )
 
 # Cargar variables de entorno
 load_dotenv()
+
+# Inicializar base de datos
+db = Database()
 
 # Crear la aplicación FastAPI
 app = FastAPI(
@@ -193,19 +189,6 @@ async def get_area_records(
         print(f"Error obteniendo recorridos por área: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-@app.get("/api/health", response_model=HealthResponse)
-async def health_check():
-    """Endpoint de health check"""
-    return HealthResponse(
-        status="healthy",
-        timestamp=datetime.now().isoformat()
-    )
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv('HTTP_PORT', 3001))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
 # ==================== GEOFENCES ENDPOINTS ====================
 
 @app.post("/api/geofences", response_model=GeofenceResponse)
@@ -278,3 +261,17 @@ async def delete_geofence(geofence_id: int):
     except Exception as e:
         print(f"Error eliminando geocerca: {e}")
         raise HTTPException(status_code=500, detail="Error eliminando geocerca")
+
+@app.get("/api/health", response_model=HealthResponse)
+async def health_check():
+    """Endpoint de health check"""
+    return HealthResponse(
+        status="healthy",
+        timestamp=datetime.now().isoformat()
+    )
+
+# Iniciar servidor (debe estar al FINAL)
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv('HTTP_PORT', 3001))
+    uvicorn.run(app, host="0.0.0.0", port=port)
