@@ -189,66 +189,109 @@ const ErrorMessage = ({ error, onRetry }) => (
   </div>
 );
 
-// --- Modal de Selección de Dispositivo  ---
+
+// --- Modal de Selección de Dispositivo (Múltiples dispositivos) ---
 const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
-  const [selectedDevice, setSelectedDevice] = useState('');
+  const [selectedDevices, setSelectedDevices] = useState([]);
 
   if (!isOpen) return null;
 
+  const handleToggleDevice = (deviceId) => {
+    setSelectedDevices(prev => {
+      if (prev.includes(deviceId)) {
+        return prev.filter(id => id !== deviceId);
+      } else {
+        return [...prev, deviceId];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedDevices.length === devices.length) {
+      setSelectedDevices([]);
+    } else {
+      setSelectedDevices(devices.map(d => d.device_id));
+    }
+  };
+
   const handleConfirm = () => {
-    if (selectedDevice) {
-      onSelectDevice(selectedDevice);
+    if (selectedDevices.length > 0) {
+      onSelectDevice(selectedDevices);
+      setSelectedDevices([]);
       onClose();
     }
   };
 
+  const handleClose = () => {
+    setSelectedDevices([]);
+    onClose();
+  };
+
+  const allSelected = selectedDevices.length === devices.length && devices.length > 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative glassmorphism-strong rounded-4xl p-8 mx-4 w-full max-w-md transform">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-white">Select Device</h2>
-          <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1 text-2xl">
+          <h2 className="text-2xl font-bold text-white">Select Devices</h2>
+          <button onClick={handleClose} className="text-white/60 cursor-pointer hover:text-white p-1 text-2xl">
             ✕
           </button>
         </div>
 
-<div className="mb-6">
-  <label className="block text-white mb-2">Choose a device to view travel records:</label>
-  <div className="max-h-60 overflow-y-auto bg-white/10 border border-white/20 rounded-xl p-2">
-    <div className="space-y-1">
-      {devices.map((device) => (
-        <label 
-          key={device.device_id}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
-            selectedDevice === device.device_id ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
-          }`}
-        >
-          <input
-            type="radio"
-            name="device"
-            value={device.device_id}
-            checked={selectedDevice === device.device_id}
-            onChange={(e) => setSelectedDevice(e.target.value)}
-            className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-500"
-          />
-          <span className="text-white font-mono text-sm">{device.device_id}</span>
-        </label>
-      ))}
-    </div>
-  </div>
-</div>
+        <div className="mb-4">
+          <label className="block text-white mb-2">Choose devices to view travel records:</label>
+          
+          <button
+            onClick={handleSelectAll}
+            className={`w-full mb-3 px-4 py-3 rounded-xl font-semibold transition-all ${
+              allSelected 
+                ? 'bg-sky-600 hover:bg-sky-700 text-white' 
+                : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+            }`}
+          >
+            {allSelected ? '✓ All Devices Selected' : 'Select All Devices'}
+          </button>
+
+          <div className="max-h-60 overflow-y-auto bg-white/10 border border-white/20 rounded-xl p-2">
+            <div className="space-y-1">
+              {devices.map((device) => (
+                <label 
+                  key={device.device_id}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
+                    selectedDevices.includes(device.device_id) ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedDevices.includes(device.device_id)}
+                    onChange={() => handleToggleDevice(device.device_id)}
+                    className="w-4 h-4 text-sky-600 rounded focus:ring-2 focus:ring-sky-500"
+                  />
+                  <span className="text-white font-mono text-sm">{device.device_id}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          {selectedDevices.length > 0 && (
+            <p className="text-sky-400 text-sm mt-2">
+              {selectedDevices.length} device{selectedDevices.length > 1 ? 's' : ''} selected
+            </p>
+          )}
+        </div>
 
         <div className="flex gap-4">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!selectedDevice}
+            disabled={selectedDevices.length === 0}
             className="flex-1 px-6 py-3 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirm
@@ -697,44 +740,46 @@ const LocationMap = ({
         </div>
       )}
 
-      {journeys.length > 0 && (
-        <div className="mt-4 p-4 bg-white/10 rounded-xl max-h-64 overflow-y-auto">
-          <h3 className="text-white font-bold mb-3">Travel Records for {travelRecordDevice}:</h3>
-          <div className="space-y-2">
-            {journeys.map((journey, index) => {
-              const startDate = new Date(journey.start_time);
-              const endDate = new Date(journey.end_time);
-              return (
-                <div key={`legend-${index}`} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
-                  <div 
-                    className="w-4 h-4 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: JOURNEY_COLORS[index % JOURNEY_COLORS.length] }}
-                  />
-                  <div className="text-white text-xs">
-                    <div className="font-semibold">Journey {index + 1}</div>
-                    <div className="text-white/70">
-                      {startDate.toLocaleString('es-ES', { 
-                        month: 'short', 
-                        day: 'numeric', 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })} - {endDate.toLocaleString('es-ES', { 
-                        month: 'short', 
-                        day: 'numeric', 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+{journeys.length > 0 && (
+  <div className="mt-4 p-4 bg-white/10 rounded-xl max-h-64 overflow-y-auto">
+    <h3 className="text-white font-bold mb-3">
+      Travel Records for: {Array.isArray(travelRecordDevice) ? travelRecordDevice.join(', ') : travelRecordDevice}
+    </h3>
+    <div className="space-y-2">
+      {journeys.map((journey, index) => {
+        const startDate = new Date(journey.start_time);
+        const endDate = new Date(journey.end_time);
+        return (
+          <div key={`legend-${index}`} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+            <div
+              className="w-4 h-4 rounded-full flex-shrink-0"
+              style={{ backgroundColor: JOURNEY_COLORS[index % JOURNEY_COLORS.length] }}
+            />
+            <div className="text-white text-xs">
+              <div className="font-semibold">
+                Journey {index + 1}
+                {journey.device_id && <span className="text-sky-400 ml-2">({journey.device_id})</span>}
+              </div>
+              <div className="text-white/70">
+                {startDate.toLocaleString('es-ES', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })} - {endDate.toLocaleString('es-ES', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })}
     </div>
-  );
-};
+  </div>
+)}
 
 // --- App Principal ---
 function App() {
@@ -749,7 +794,7 @@ function App() {
   
   const [travelRecordMode, setTravelRecordMode] = useState(false);
   const [isDeviceSelectionModalOpen, setIsDeviceSelectionModalOpen] = useState(false);
-  const [selectedDeviceForTravel, setSelectedDeviceForTravel] = useState(null);
+  const [selectedDeviceForTravel, setSelectedDeviceForTravel] = useState([]);
   const [journeys, setJourneys] = useState([]);
 
   const fetchAllDevices = async () => {
@@ -894,52 +939,59 @@ function App() {
     setIsDeviceSelectionModalOpen(true);
   };
 
-  const handleDeviceSelected = (deviceId) => {
-    setSelectedDeviceForTravel(deviceId);
-    setTravelRecordMode(true);
-    setIsLiveMode(false);
-    setJourneys([]);
-    setLocationsData([]);
-    setPaths({});
-  };
+  const handleDeviceSelected = (deviceIds) => {
+  setSelectedDeviceForTravel(deviceIds);
+  setTravelRecordMode(true);
+  setIsLiveMode(false);
+  setJourneys([]);
+  setLocationsData([]);
+  setPaths({});
+};
 
-  const handleAreaDrawn = async (area) => {
-    if (!selectedDeviceForTravel) return;
+const handleAreaDrawn = async (area) => {
+  if (!selectedDeviceForTravel || selectedDeviceForTravel.length === 0) return;
 
-    setLoading(true);
-    try {
-      const url = `${config.API_BASE_URL}/api/location/area-records?minLat=${area.minLat}&maxLat=${area.maxLat}&minLng=${area.minLng}&maxLng=${area.maxLng}&device_id=${selectedDeviceForTravel}`;
+  setLoading(true);
+  try {
+    const allJourneys = [];
+    
+    for (const deviceId of selectedDeviceForTravel) {
+      const url = `${config.API_BASE_URL}/api/location/area-records?minLat=${area.minLat}&maxLat=${area.maxLat}&minLng=${area.minLng}&maxLng=${area.maxLng}&device_id=${deviceId}`;
       
       const response = await fetch(url);
       
-      if (!response.ok) {
-        throw new Error('Error al obtener recorridos');
+      if (response.ok) {
+        const data = await response.json();
+        const journeysWithDevice = data.map(journey => ({
+          ...journey,
+          device_id: deviceId
+        }));
+        allJourneys.push(...journeysWithDevice);
       }
-
-      const data = await response.json();
-      
-      if (data.length > 0) {
-        setJourneys(data);
-        setError(null);
-      } else {
-        setError('No se encontraron recorridos en esta área para el dispositivo seleccionado.');
-        setJourneys([]);
-      }
-    } catch (err) {
-      setError('Error al buscar recorridos en el área.');
-      console.error('Error fetching area records:', err);
-    } finally {
-      setLoading(false);
     }
-  };
+    
+    if (allJourneys.length > 0) {
+      setJourneys(allJourneys);
+      setError(null);
+    } else {
+      setError('No se encontraron recorridos en esta área para los dispositivos seleccionados.');
+      setJourneys([]);
+    }
+  } catch (err) {
+    setError('Error al buscar recorridos en el área.');
+    console.error('Error fetching area records:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleExitTravelRecord = () => {
-    setTravelRecordMode(false);
-    setSelectedDeviceForTravel(null);
-    setJourneys([]);
-    setIsLiveMode(true);
-    setLoading(true);
-  };
+const handleExitTravelRecord = () => {
+  setTravelRecordMode(false);
+  setSelectedDeviceForTravel([]);
+  setJourneys([]);
+  setIsLiveMode(true);
+  setLoading(true);
+};
 
   useEffect(() => {
     fetchAllDevices();
