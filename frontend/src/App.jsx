@@ -781,13 +781,18 @@ const LocationMap = ({
         ))}
 
         {!travelRecordMode && locations.map((location, index) => {
+          // Saltar ubicaciones sin device_id válido
+          if (!location.device_id || location.device_id === 'Device' || location.device_id === 'unknown') {
+            return null;
+          }
+          
           const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
           const activeDeviceIds = locations.map(loc => loc.device_id);
           const deviceColor = getColorForDevice(location.device_id, activeDeviceIds);
 
           return (
             <CircleMarker
-              key={location.device_id || index}
+              key={location.device_id}
               center={markerPosition}
               radius={12}
               pathOptions={{
@@ -811,7 +816,10 @@ const LocationMap = ({
         })}
 
         {!travelRecordMode && Object.entries(paths).map(([deviceId, devicePath]) => {
-          if (devicePath.length === 0) return null;
+          // Saltar rutas sin device_id válido
+          if (devicePath.length === 0 || !deviceId || deviceId === 'Device' || deviceId === 'unknown') {
+            return null;
+          }
           const activeDeviceIds = locations.map(loc => loc.device_id);
           return (
             <Polyline
@@ -834,7 +842,7 @@ const LocationMap = ({
         <div className="mt-4 p-4 bg-white/10 rounded-xl">
           <h3 className="text-white font-bold mb-2">Active Devices:</h3>
           <div className="flex flex-wrap gap-2">
-            {locations.map((location) => (
+            {locations.filter(loc => loc.device_id && loc.device_id !== 'Device' && loc.device_id !== 'unknown').map((location) => (
               <div key={location.device_id} className="flex items-center gap-2">
                 <div
                   className="w-4 h-4 rounded-full"
@@ -926,7 +934,9 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         const devicesArray = Array.isArray(data) 
-          ? data.map(d => typeof d === 'string' ? { device_id: d } : d)
+          ? data
+              .map(d => typeof d === 'string' ? { device_id: d } : d)
+              .filter(d => d.device_id && d.device_id !== 'Device' && d.device_id !== 'unknown' && d.device_id.trim() !== '')
           : [];
         setAllDevices(devicesArray);
       }
@@ -964,11 +974,19 @@ function App() {
         }
       } else {
         const data = await response.json();
+        
+        // Filtrar ubicaciones sin device_id válido
+        const validData = data.filter(loc => 
+          loc.device_id && 
+          loc.device_id !== 'Device' && 
+          loc.device_id !== 'unknown' && 
+          loc.device_id.trim() !== ''
+        );
 
-        const activeLocations = filterActiveDevices(data);
+        const activeLocations = filterActiveDevices(validData);
         setLocationsData(activeLocations);
 
-        const activeIds = activeLocations.map(loc => loc.device_id || 'unknown');
+        const activeIds = activeLocations.map(loc => loc.device_id);
         setActiveDeviceIds(activeIds);
 
         cleanInactivePaths(activeIds);
@@ -1018,13 +1036,21 @@ function App() {
       }
 
       const historicalData = await response.json();
+      
+      // Filtrar datos sin device_id válido
+      const validHistoricalData = historicalData.filter(point => 
+        point.device_id && 
+        point.device_id !== 'Device' && 
+        point.device_id !== 'unknown' && 
+        point.device_id.trim() !== ''
+      );
 
-      if (historicalData.length > 0) {
+      if (validHistoricalData.length > 0) {
         const pathsByDevice = {};
         const locationsByDevice = {};
 
-        historicalData.forEach(point => {
-          const devId = point.device_id || 'unknown';
+        validHistoricalData.forEach(point => {
+          const devId = point.device_id;
           if (!pathsByDevice[devId]) {
             pathsByDevice[devId] = [];
           }
