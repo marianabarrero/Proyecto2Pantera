@@ -1425,27 +1425,52 @@ const handleExitTravelRecord = () => {
 };
 const handleSaveGeofence = async (geofenceData) => {
   try {
+    // Preparar el payload de la geocerca (sin journeys)
+    const geofencePayload = {
+      name: geofenceData.name,
+      description: geofenceData.description || '',
+      min_lat: geofenceData.area.minLat,
+      max_lat: geofenceData.area.maxLat,
+      min_lng: geofenceData.area.minLng,
+      max_lng: geofenceData.area.maxLng,
+      device_ids: geofenceData.devices,
+      created_by: 'julicarolinav'
+    };
+
+    // Preparar los journeys en el formato correcto
+    const journeysPayload = geofenceData.journeys && geofenceData.journeys.length > 0
+      ? geofenceData.journeys.map(journey => ({
+          device_id: journey.device_id,
+          start_time: journey.start_time,
+          end_time: journey.end_time,
+          points: journey.points
+        }))
+      : null;
+
+    // Crear el payload completo
+    const payload = {
+      geofence: geofencePayload,
+      journeys: journeysPayload
+    };
+
+    console.log('Sending payload:', JSON.stringify(payload, null, 2)); // Para debug
+
     const response = await fetch(`${config.API_BASE_URL}/api/geofences`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        name: geofenceData.name,
-        description: geofenceData.description,
-        min_lat: geofenceData.area.minLat,
-        max_lat: geofenceData.area.maxLat,
-        min_lng: geofenceData.area.minLng,
-        max_lng: geofenceData.area.maxLng,
-        device_ids: geofenceData.devices,
-        created_by: 'julicarolinav',
-        journeys: geofenceData.journeys
-      }),
+      body: JSON.stringify(payload)
     });
+
     if (!response.ok) {
-      throw new Error('Failed to save geofence');
+      const errorData = await response.json();
+      console.error('Server error:', errorData);
+      throw new Error(`Failed to save geofence: ${JSON.stringify(errorData)}`);
     }
 
+    const result = await response.json();
+    console.log('Geofence saved successfully:', result);
     alert('✅ Geofence saved successfully!');
   } catch (err) {
     console.error('Error saving geofence:', err);

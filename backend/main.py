@@ -2,9 +2,11 @@ import asyncio
 import os
 import json
 from datetime import datetime
+from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 from database import Database
 from udp_server import start_udp_server, stop_udp_server
@@ -19,6 +21,12 @@ load_dotenv()
 
 # Inicializar base de datos
 db = Database()
+
+# Modelo para el request de guardar geocerca
+class GeofenceSaveRequest(BaseModel):
+    """Request para guardar geocerca con journeys"""
+    geofence: GeofenceCreate
+    journeys: Optional[List[GeofenceJourney]] = None
 
 # Crear la aplicación FastAPI
 app = FastAPI(
@@ -192,16 +200,25 @@ async def get_area_records(
 # ==================== GEOFENCES ENDPOINTS ====================
 
 @app.post("/api/geofences", response_model=GeofenceResponse)
-async def create_geofence(geofence: GeofenceCreate, journeys: list[GeofenceJourney] = None):
+async def create_geofence(request: GeofenceSaveRequest):
     """Crea una nueva geocerca"""
     try:
-        geofence_data = geofence.dict()
-        journeys_data = [j.dict() for j in journeys] if journeys else None
+        print(f"=== Recibiendo request de geocerca ===")
+        print(f"Geofence data: {request.geofence.dict()}")
+        print(f"Journeys count: {len(request.journeys) if request.journeys else 0}")
         
+        geofence_data = request.geofence.dict()
+        journeys_data = [j.dict() for j in request.journeys] if request.journeys else None
+        
+        print(f"Llamando a db.create_geofence...")
         result = await db.create_geofence(geofence_data, journeys_data)
+        print(f"Geocerca creada exitosamente: ID {result.get('id')}")
+        
         return GeofenceResponse(**result)
     except Exception as e:
-        print(f"Error creando geocerca: {e}")
+        print(f"❌ Error creando geocerca: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error creando geocerca: {str(e)}")
 
 @app.get("/api/geofences", response_model=list[GeofenceResponse])
@@ -211,55 +228,71 @@ async def get_geofences(
 ):
     """Obtiene todas las geocercas"""
     try:
+        print(f"Obteniendo geocercas - created_by: {created_by}, is_active: {is_active}")
         results = await db.get_all_geofences(created_by, is_active)
+        print(f"Geocercas encontradas: {len(results)}")
         return [GeofenceResponse(**result) for result in results]
     except Exception as e:
         print(f"Error obteniendo geocercas: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error obteniendo geocercas")
 
 @app.get("/api/geofences/{geofence_id}", response_model=GeofenceWithJourneys)
 async def get_geofence(geofence_id: int):
     """Obtiene una geocerca específica con sus journeys"""
     try:
+        print(f"Obteniendo geocerca ID: {geofence_id}")
         result = await db.get_geofence_by_id(geofence_id)
         if not result:
             raise HTTPException(status_code=404, detail="Geocerca no encontrada")
+        print(f"Geocerca encontrada: {result.get('name')}")
         return GeofenceWithJourneys(**result)
     except HTTPException:
         raise
     except Exception as e:
         print(f"Error obteniendo geocerca: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error obteniendo geocerca")
 
 @app.put("/api/geofences/{geofence_id}", response_model=GeofenceResponse)
 async def update_geofence(geofence_id: int, update_data: dict):
     """Actualiza una geocerca"""
     try:
+        print(f"Actualizando geocerca ID: {geofence_id}")
         result = await db.update_geofence(geofence_id, update_data)
         if not result:
             raise HTTPException(status_code=404, detail="Geocerca no encontrada")
         
         # Agregar journey_count
         result['journey_count'] = 0
+        print(f"Geocerca actualizada exitosamente")
         return GeofenceResponse(**result)
     except HTTPException:
         raise
     except Exception as e:
         print(f"Error actualizando geocerca: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error actualizando geocerca")
 
 @app.delete("/api/geofences/{geofence_id}")
 async def delete_geofence(geofence_id: int):
     """Elimina una geocerca (soft delete)"""
     try:
+        print(f"Eliminando geocerca ID: {geofence_id}")
         success = await db.delete_geofence(geofence_id)
         if not success:
             raise HTTPException(status_code=404, detail="Geocerca no encontrada")
+        print(f"Geocerca eliminada exitosamente")
         return {"message": "Geocerca eliminada exitosamente"}
     except HTTPException:
         raise
     except Exception as e:
         print(f"Error eliminando geocerca: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error eliminando geocerca")
 
 @app.get("/api/health", response_model=HealthResponse)
