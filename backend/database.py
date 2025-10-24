@@ -330,10 +330,9 @@ class Database:
             return dict(record) if record else None
 
     async def delete_geofence(self, geofence_id: int):
-        """Elimina una geocerca (soft delete)"""
+        """Elimina una geocerca permanentemente (hard delete)"""
         query = """
-        UPDATE geofences
-        SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+        DELETE FROM geofences
         WHERE id = $1
         RETURNING id;
         """
