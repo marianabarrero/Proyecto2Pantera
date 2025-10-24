@@ -64,6 +64,7 @@ const getColorForDevice = (deviceId, allDevices) => {
   return DEVICE_COLORS[index % DEVICE_COLORS.length];
 };
 
+
 const isDeviceActive = (timestamp) => {
   const now = Date.now();
   const deviceTime = parseInt(timestamp);
@@ -442,7 +443,7 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
           <span className="text-white font-mono text-sm">All Devices</span>
         </label>
         {devices.map((device) => (
-          <label 
+          <label
             key={device.device_id}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
               selectedDevice === device.device_id ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
@@ -508,18 +509,18 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
           <div className="space-y-3">
             {allDevices.map((device) => {
               const isActive = activeDeviceIds.includes(device.device_id);
-              
+
               return (
-                <div 
-                  key={device.device_id} 
+                <div
+                  key={device.device_id}
                   className="flex items-center justify-between gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    <div 
+                    <div
                       className={`w-3 h-3 rounded-full ${isActive ? 'bg-green-500' : 'bg-red-500'} shadow-lg`}
                       style={{
-                        boxShadow: isActive 
-                          ? '0 0 10px rgba(34, 197, 94, 0.6)' 
+                        boxShadow: isActive
+                          ? '0 0 10px rgba(34, 197, 94, 0.6)'
                           : '0 0 10px rgba(239, 68, 68, 0.6)'
                       }}
                     />
@@ -528,10 +529,10 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
                     </span>
                   </div>
 
-                  <span 
+                  <span
                     className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      isActive 
-                        ? 'bg-green-500/20 text-green-400' 
+                      isActive
+                        ? 'bg-green-500/20 text-green-400'
                         : 'bg-red-500/20 text-red-400'
                     }`}
                   >
@@ -564,7 +565,7 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
 // --- Map Updater ---
 const MapUpdater = ({ bounds, hasUserInteracted }) => {
   const map = useMap();
-  
+
   useEffect(() => {
     if (bounds && bounds.length > 0 && !hasUserInteracted) {
       if (bounds.length > 1) {
@@ -581,31 +582,31 @@ const MapUpdater = ({ bounds, hasUserInteracted }) => {
       }
     }
   }, [bounds, map, hasUserInteracted]);
-  
+
   return null;
 };
 
 // --- Componente del Mapa ---
-const LocationMap = ({ 
-  locations, 
-  formatTimestamp, 
-  paths, 
-  allDevices, 
-  travelRecordMode, 
-  onAreaDrawn, 
+const LocationMap = ({
+  locations,
+  formatTimestamp,
+  paths,
+  allDevices,
+  travelRecordMode,
+  onAreaDrawn,
   journeys,
-  travelRecordDevice 
+  travelRecordDevice
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  
-  const centerLocation = locations.length > 0 
-    ? locations[0] 
+
+  const centerLocation = locations.length > 0
+    ? locations[0]
     : { latitude: 11.01315, longitude: -74.82767 };
   const position = [parseFloat(centerLocation.latitude), parseFloat(centerLocation.longitude)];
 
   const allPathPoints = Object.values(paths).flat();
   const currentLocationPoints = locations.map(loc => [parseFloat(loc.latitude), parseFloat(loc.longitude)]);
-  
+
   let journeyPoints = [];
   if (journeys.length > 0) {
     journeys.forEach(journey => {
@@ -614,13 +615,13 @@ const LocationMap = ({
       });
     });
   }
-  
+
   const allPoints = [...allPathPoints, ...currentLocationPoints, ...journeyPoints];
   const bounds = allPoints.length > 0 ? allPoints : [position];
 
   const InteractionDetector = () => {
     const map = useMap();
-    
+
     useEffect(() => {
       const handleInteraction = () => {
         setHasUserInteracted(true);
@@ -659,29 +660,29 @@ const LocationMap = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        
+
         {travelRecordMode && <RectangleDrawer onRectangleComplete={onAreaDrawn} />}
 
         {journeys.length > 0 && journeys.map((journey, index) => (
           <Polyline
             key={`journey-${index}`}
-            pathOptions={{ 
-              color: JOURNEY_COLORS[index % JOURNEY_COLORS.length], 
+            pathOptions={{
+              color: JOURNEY_COLORS[index % JOURNEY_COLORS.length],
               weight: 5,
               opacity: 0.8
             }}
             positions={journey.points.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)])}
           />
         ))}
-        
+
         {!travelRecordMode && locations.map((location, index) => {
           const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
           const activeDeviceIds = locations.map(loc => loc.device_id);
           const deviceColor = getColorForDevice(location.device_id, activeDeviceIds);
-          
+
           return (
-            <CircleMarker 
-              key={location.device_id || index} 
+            <CircleMarker
+              key={location.device_id || index}
               center={markerPosition}
               radius={12}
               pathOptions={{
@@ -710,9 +711,9 @@ const LocationMap = ({
           return (
             <Polyline
               key={deviceId}
-              pathOptions={{ 
-                color: getColorForDevice(deviceId, activeDeviceIds), 
-                weight: 4 
+              pathOptions={{
+                color: getColorForDevice(deviceId, activeDeviceIds),
+                weight: 4
               }}
               positions={devicePath}
             />
@@ -729,7 +730,7 @@ const LocationMap = ({
           <div className="flex flex-wrap gap-2">
             {locations.map((location) => (
               <div key={location.device_id} className="flex items-center gap-2">
-                <div 
+                <div
                   className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: getColorForDevice(location.device_id, locations.map(loc => loc.device_id)) }}
                 />
@@ -780,7 +781,9 @@ const LocationMap = ({
     </div>
   </div>
 )}
-
+    </div>
+  );
+};
 // --- App Principal ---
 function App() {
   const [locationsData, setLocationsData] = useState([]);
@@ -791,7 +794,7 @@ function App() {
   const [activeDeviceIds, setActiveDeviceIds] = useState([]);
   const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(true);
-  
+
   const [travelRecordMode, setTravelRecordMode] = useState(false);
   const [isDeviceSelectionModalOpen, setIsDeviceSelectionModalOpen] = useState(false);
   const [selectedDeviceForTravel, setSelectedDeviceForTravel] = useState([]);
@@ -841,7 +844,7 @@ function App() {
         }
       } else {
         const data = await response.json();
-        
+
         const activeLocations = filterActiveDevices(data);
         setLocationsData(activeLocations);
 
@@ -852,18 +855,18 @@ function App() {
 
         setPaths(prevPaths => {
           const newPaths = { ...prevPaths };
-          
+
           activeLocations.forEach(location => {
             const deviceId = location.device_id || 'unknown';
             const newPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
             const devicePath = newPaths[deviceId] || [];
             const lastPoint = devicePath[devicePath.length - 1];
-            
+
             if (!lastPoint || lastPoint[0] !== newPosition[0] || lastPoint[1] !== newPosition[1]) {
               newPaths[deviceId] = [...devicePath, newPosition];
             }
           });
-          
+
           return newPaths;
         });
 
@@ -884,7 +887,7 @@ function App() {
 
     try {
       const { startDate, endDate, deviceId } = searchData;
-      const url = deviceId 
+      const url = deviceId
         ? `${config.API_BASE_URL}/api/location/range?startDate=${startDate}&endDate=${endDate}&device_id=${deviceId}`
         : `${config.API_BASE_URL}/api/location/range?startDate=${startDate}&endDate=${endDate}`;
 
@@ -899,7 +902,7 @@ function App() {
       if (historicalData.length > 0) {
         const pathsByDevice = {};
         const locationsByDevice = {};
-        
+
         historicalData.forEach(point => {
           const devId = point.device_id || 'unknown';
           if (!pathsByDevice[devId]) {
@@ -909,15 +912,15 @@ function App() {
             parseFloat(point.latitude),
             parseFloat(point.longitude)
           ]);
-          
+
           locationsByDevice[devId] = point;
         });
 
         setPaths(pathsByDevice);
-        
+
         const allLocations = Object.values(locationsByDevice);
         setLocationsData(allLocations);
-        
+
         setActiveDeviceIds(Object.keys(locationsByDevice));
 
       } else {
@@ -954,12 +957,12 @@ const handleAreaDrawn = async (area) => {
   setLoading(true);
   try {
     const allJourneys = [];
-    
+
     for (const deviceId of selectedDeviceForTravel) {
       const url = `${config.API_BASE_URL}/api/location/area-records?minLat=${area.minLat}&maxLat=${area.maxLat}&minLng=${area.minLng}&maxLng=${area.maxLng}&device_id=${deviceId}`;
-      
+
       const response = await fetch(url);
-      
+
       if (response.ok) {
         const data = await response.json();
         const journeysWithDevice = data.map(journey => ({
@@ -969,7 +972,7 @@ const handleAreaDrawn = async (area) => {
         allJourneys.push(...journeysWithDevice);
       }
     }
-    
+
     if (allJourneys.length > 0) {
       setJourneys(allJourneys);
       setError(null);
@@ -1068,9 +1071,9 @@ const handleExitTravelRecord = () => {
             )}
 
             <div className="w-full md:w-3/4 animate-slide-in-left interactive-glow rounded-4xl">
-              <LocationMap 
+              <LocationMap
                 locations={locationsData}
-                formatTimestamp={formatTimestamp} 
+                formatTimestamp={formatTimestamp}
                 paths={paths}
                 allDevices={allDevices}
                 travelRecordMode={travelRecordMode}
