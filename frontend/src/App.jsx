@@ -470,14 +470,14 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
         onClick={onOpenTravelRecord}
         className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
       >
-        <span className='group-hover:text-white/90 duration-300'>Travel Record</span>
+        <span className='text-white group-hover:text-white/90 duration-300'>Travel Record</span>
       </button>
 
       <button
         onClick={onOpenDateSearch}
         className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
       >
-        <span className='group-hover:text-white/90 duration-300'>Search by Date</span>
+        <span className='text-white group-hover:text-white/90 duration-300'>Search by Date</span>
       </button>
     </div>
   );
@@ -522,7 +522,7 @@ const LocationMap = ({
   
   const centerLocation = locations.length > 0 
     ? locations[0] 
-    : { latitude: 40.7128, longitude: -74.0060 };
+    : { latitude: 11.01315, longitude: -74.82767 };
   const position = [parseFloat(centerLocation.latitude), parseFloat(centerLocation.longitude)];
 
   const allPathPoints = Object.values(paths).flat();
