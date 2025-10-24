@@ -213,21 +213,31 @@ const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
           </button>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-white mb-2">Choose a device to view travel records:</label>
-          <select
-            value={selectedDevice}
+<div className="mb-6">
+  <label className="block text-white mb-2">Choose a device to view travel records:</label>
+  <div className="max-h-60 overflow-y-auto bg-white/10 border border-white/20 rounded-xl p-2">
+    <div className="space-y-1">
+      {devices.map((device) => (
+        <label 
+          key={device.device_id}
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
+            selectedDevice === device.device_id ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
+          }`}
+        >
+          <input
+            type="radio"
+            name="device"
+            value={device.device_id}
+            checked={selectedDevice === device.device_id}
             onChange={(e) => setSelectedDevice(e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="">-- Select Device --</option>
-            {devices.map((device) => (
-              <option key={device.device_id} value={device.device_id}>
-                {device.device_id}
-              </option>
-            ))}
-          </select>
-        </div>
+            className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-500"
+          />
+          <span className="text-white font-mono text-sm">{device.device_id}</span>
+        </label>
+      ))}
+    </div>
+  </div>
+</div>
 
         <div className="flex gap-4">
           <button
@@ -368,23 +378,48 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
           </LocalizationProvider>
         </ThemeProvider>
 
-        {devices.length > 0 && (
-          <div className="mt-6">
-            <label className="block text-white mb-2">Filter by Device:</label>
-            <select
-              value={selectedDevice}
+{devices.length > 0 && (
+  <div className="mt-6">
+    <label className="block text-white mb-2">Filter by Device:</label>
+    <div className="max-h-60 overflow-y-auto bg-white/10 border border-white/20 rounded-xl p-2">
+      <div className="space-y-1">
+        <label
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
+            selectedDevice === 'all' ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
+          }`}
+        >
+          <input
+            type="radio"
+            name="device-filter"
+            value="all"
+            checked={selectedDevice === 'all'}
+            onChange={(e) => setSelectedDevice(e.target.value)}
+            className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-500"
+          />
+          <span className="text-white font-mono text-sm">All Devices</span>
+        </label>
+        {devices.map((device) => (
+          <label 
+            key={device.device_id}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
+              selectedDevice === device.device_id ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
+            }`}
+          >
+            <input
+              type="radio"
+              name="device-filter"
+              value={device.device_id}
+              checked={selectedDevice === device.device_id}
               onChange={(e) => setSelectedDevice(e.target.value)}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="all">All Devices</option>
-              {devices.map((device) => (
-                <option key={device.device_id} value={device.device_id}>
-                  {device.device_id}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+              className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-500"
+            />
+            <span className="text-white font-mono text-sm">{device.device_id}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
 
         {error && (
           <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-xl">
