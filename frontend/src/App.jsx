@@ -493,7 +493,8 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
 };
 
 // --- Lista de Dispositivos ---
-const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord }) => {
+// --- Lista de Dispositivos ---
+const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord, onDeviceClick, isLiveMode }) => {
   return (
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong'>
       <div className='rounded-4xl h-auto'>
@@ -509,11 +510,16 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
           <div className="space-y-3">
             {allDevices.map((device) => {
               const isActive = activeDeviceIds.includes(device.device_id);
+              const isClickable = !isLiveMode && isActive;
 
               return (
                 <div
                   key={device.device_id}
-                  className="flex items-center justify-between gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                  onClick={() => isClickable ? onDeviceClick(device.device_id) : null}
+                  className={`flex items-center justify-between gap-3 px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all ${
+                    isClickable ? 'cursor-pointer hover:scale-105 hover:shadow-lg hover:bg-sky-500/20' : ''
+                  }`}
+                  title={isClickable ? 'Click to zoom to device path' : ''}
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -579,6 +585,34 @@ const MapUpdater = ({ bounds, hasUserInteracted }) => {
           duration: 1.5,
           easeLinearity: 0.25
         });
+        // --- Device Zoom Handler ---
+const DeviceZoomHandler = ({ deviceId, paths }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (deviceId && paths[deviceId] && paths[deviceId].length > 0) {
+      const devicePath = paths[deviceId];
+      
+      if (devicePath.length === 1) {
+        // Si solo hay un punto, hacer zoom a ese punto
+        map.flyTo(devicePath[0], 15, {
+          duration: 1.5,
+          easeLinearity: 0.25
+        });
+      } else {
+        // Si hay múltiples puntos, ajustar el mapa para mostrar todo el recorrido
+        const bounds = L.latLngBounds(devicePath);
+        map.fitBounds(bounds, { 
+          padding: [50, 50], 
+          maxZoom: 16,
+          duration: 1.5
+        });
+      }
+    }
+  }, [deviceId, paths, map]);
+
+  return null;
+};
       }
     }
   }, [bounds, map, hasUserInteracted]);
@@ -595,7 +629,8 @@ const LocationMap = ({
   travelRecordMode,
   onAreaDrawn,
   journeys,
-  travelRecordDevice
+  travelRecordDevice,
+  selectedDeviceForZoom
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [selectedJourneyIndex, setSelectedJourneyIndex] = useState(null);
@@ -687,6 +722,9 @@ const LocationMap = ({
         />
 
         {travelRecordMode && <RectangleDrawer onRectangleComplete={onAreaDrawn} />}
+        {selectedDeviceForZoom && <DeviceZoomHandler deviceId={selectedDeviceForZoom} paths={paths} />}
+
+
 
         {journeys.length > 0 && journeys.map((journey, index) => (
           <Polyline
@@ -838,6 +876,7 @@ function App() {
   const [isDeviceSelectionModalOpen, setIsDeviceSelectionModalOpen] = useState(false);
   const [selectedDeviceForTravel, setSelectedDeviceForTravel] = useState([]);
   const [journeys, setJourneys] = useState([]);
+  const [selectedDeviceForZoom, setSelectedDeviceForZoom] = useState(null);
 
   const fetchAllDevices = async () => {
     try {
@@ -1026,6 +1065,14 @@ const handleAreaDrawn = async (area) => {
     setLoading(false);
   }
 };
+  const handleDeviceClick = (deviceId) => {
+    if (!isLiveMode) {
+      setSelectedDeviceForZoom(deviceId);
+      // Resetear después de un tiempo para permitir múltiples clicks
+      setTimeout(() => setSelectedDeviceForZoom(null), 2000);
+    }
+  };
+
 
 const handleExitTravelRecord = () => {
   setTravelRecordMode(false);
@@ -1119,6 +1166,7 @@ const handleExitTravelRecord = () => {
                 onAreaDrawn={handleAreaDrawn}
                 journeys={journeys}
                 travelRecordDevice={selectedDeviceForTravel}
+                selectedDeviceForZoom={selectedDeviceForZoom}
               />
             </div>
             <div className="w-full md:w-1/4 flex flex-col gap-8 text-center animate-slide-in-right">
@@ -1130,6 +1178,8 @@ const handleExitTravelRecord = () => {
                 activeDeviceIds={activeDeviceIds}
                 onOpenDateSearch={() => setIsDateSearchModalOpen(true)}
                 onOpenTravelRecord={handleOpenTravelRecord}
+                onDeviceClick={handleDeviceClick}
+                isLiveMode={isLiveMode}
               />
             </div>
           </>
