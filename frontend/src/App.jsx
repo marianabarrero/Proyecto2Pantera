@@ -491,11 +491,264 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
     </div>
   );
 };
+// --- Modal para Guardar Geocerca ---
+const SaveGeofenceModal = ({ isOpen, onClose, onSave, area, devices, journeys }) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) {
+      setName('');
+      setDescription('');
+      setError('');
+    }
+  }, [isOpen]);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      setError('Please enter a name for the geofence');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await onSave({
+        name: name.trim(),
+        description: description.trim(),
+        area,
+        devices,
+        journeys
+      });
+      onClose();
+    } catch (err) {
+      setError('Error saving geofence. Please try again.');
+      console.error('Error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative glassmorphism-strong rounded-4xl p-8 mx-4 w-full max-w-md transform">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-white">💾 Save Geofence</h2>
+          <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1 text-2xl">
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-white mb-2 font-medium">Geofence Name *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Downtown Area, Route 1"
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/50 transition-all"
+              maxLength={100}
+            />
+          </div>
+
+          <div>
+            <label className="block text-white mb-2 font-medium">Description (Optional)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add notes about this geofence..."
+              rows={3}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/50 transition-all resize-none"
+              maxLength={500}
+            />
+          </div>
+
+          <div className="bg-sky-500/10 border border-sky-500/30 rounded-xl p-4">
+            <h3 className="text-white font-semibold mb-2">Summary:</h3>
+            <div className="text-white/70 text-sm space-y-1">
+              <p>📍 Devices: {devices?.length || 0}</p>
+              <p>🛣️ Journeys: {journeys?.length || 0}</p>
+              {area && (
+                <p className="text-xs mt-2 text-white/50">
+                  Area: {area.minLat.toFixed(4)}, {area.minLng.toFixed(4)} → {area.maxLat.toFixed(4)}, {area.maxLng.toFixed(4)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <div className="text-center text-red-400 bg-red-900/50 p-3 rounded-xl text-sm">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-4 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium"
+            disabled={isLoading}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isLoading || !name.trim()}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Saving...' : '💾 Save Geofence'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Modal para Ver Geocercas Guardadas ---
+const GeofencesListModal = ({ isOpen, onClose, onLoadGeofence, onDeleteGeofence }) => {
+  const [geofences, setGeofences] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchGeofences();
+    }
+  }, [isOpen]);
+
+  const fetchGeofences = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/api/geofences?created_by=julicarolinav`);
+      if (response.ok) {
+        const data = await response.json();
+        setGeofences(data);
+      } else {
+        throw new Error('Failed to fetch geofences');
+      }
+    } catch (err) {
+      setError('Error loading geofences');
+      console.error('Error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoad = async (geofenceId) => {
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/api/geofences/${geofenceId}`);
+      if (response.ok) {
+        const data = await response.json();
+        onLoadGeofence(data);
+        onClose();
+      }
+    } catch (err) {
+      console.error('Error loading geofence:', err);
+    }
+  };
+
+  const handleDelete = async (geofenceId) => {
+    if (window.confirm('Are you sure you want to delete this geofence?')) {
+      try {
+        const response = await fetch(`${config.API_BASE_URL}/api/geofences/${geofenceId}`, {
+          method: 'DELETE'
+        });
+        if (response.ok) {
+          fetchGeofences();
+          if (onDeleteGeofence) onDeleteGeofence(geofenceId);
+        }
+      } catch (err) {
+        console.error('Error deleting geofence:', err);
+      }
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative glassmorphism-strong rounded-4xl p-8 mx-4 w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col transform">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-white">📁 Saved Geofences</h2>
+          <button onClick={onClose} className="text-white/60 cursor-pointer hover:text-white p-1 text-2xl">
+            ✕
+          </button>
+        </div>
+
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : error ? (
+          <div className="text-center text-red-400 p-8">{error}</div>
+        ) : geofences.length === 0 ? (
+          <div className="text-center text-white/60 py-12">
+            <p className="text-lg mb-2">📭 No saved geofences yet</p>
+            <p className="text-sm">Create a geofence in Travel Record mode to save it</p>
+          </div>
+        ) : (
+          <div className="overflow-y-auto flex-1 space-y-3">
+            {geofences.map((geofence) => (
+              <div
+                key={geofence.id}
+                className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-4 transition-all"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="text-white font-bold text-lg mb-1">{geofence.name}</h3>
+                    {geofence.description && (
+                      <p className="text-white/60 text-sm mb-2">{geofence.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-3 text-xs text-white/50">
+                      <span>📍 {geofence.device_ids?.length || 0} devices</span>
+                      <span>🛣️ {geofence.journey_count || 0} journeys</span>
+                      <span>📅 {new Date(geofence.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      onClick={() => handleLoad(geofence.id)}
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition-all text-sm font-medium"
+                    >
+                      📂 Load
+                    </button>
+                    <button
+                      onClick={() => handleDelete(geofence.id)}
+                      className="px-4 py-2 bg-red-600/80 hover:bg-red-700 text-white rounded-lg transition-all text-sm font-medium"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 pt-4 border-t border-white/10">
+          <button
+            onClick={onClose}
+            className="w-full px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- Lista de Dispositivos ---
 // --- Lista de Dispositivos ---
 // --- Lista de Dispositivos ---
-const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord, onDeviceClick, isLiveMode }) => {
+const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord, onDeviceClick, isLiveMode, onOpenGeofencesList }) => {
   return (
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong'>
       <div className='rounded-4xl h-auto'>
@@ -589,6 +842,13 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
       >
         <span className='text-white group-hover:text-white/90 duration-300'>Search by Date</span>
       </button>
+
+      <button
+        onClick={onOpenGeofencesList}
+        className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
+      >
+        <span className='text-white group-hover:text-white/90 duration-300'>📁 Saved Geofences</span>
+      </button>
     </div>
   );
 };
@@ -666,7 +926,8 @@ const LocationMap = ({
   onAreaDrawn,
   journeys,
   travelRecordDevice,
-  selectedDeviceForZoom
+  selectedDeviceForZoom,
+  onSaveGeofence
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [selectedJourneyIndex, setSelectedJourneyIndex] = useState(null);
@@ -857,9 +1118,18 @@ const LocationMap = ({
 
 {journeys.length > 0 && (
   <div className="mt-4 p-4 bg-white/10 rounded-xl max-h-64 overflow-y-auto">
-    <h3 className="text-white font-bold mb-3">
-      Travel Records for: {Array.isArray(travelRecordDevice) ? travelRecordDevice.join(', ') : travelRecordDevice}
-    </h3>
+    <div className="flex justify-between items-center mb-3">
+      <h3 className="text-white font-bold">
+        Travel Records for: {Array.isArray(travelRecordDevice) ? travelRecordDevice.join(', ') : travelRecordDevice}
+      </h3>
+      <button
+        onClick={onSaveGeofence}
+        className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg transition-all font-medium text-sm flex items-center gap-2"
+        title="Save this geofence"
+      >
+        💾 Save Geofence
+      </button>
+    </div>
     <div className="space-y-2">
       {journeys.map((journey, index) => {
         const startDate = new Date(journey.start_time);
@@ -927,6 +1197,9 @@ function App() {
   const [selectedDeviceForTravel, setSelectedDeviceForTravel] = useState([]);
   const [journeys, setJourneys] = useState([]);
   const [selectedDeviceForZoom, setSelectedDeviceForZoom] = useState(null);
+  const [currentArea, setCurrentArea] = useState(null);
+  const [isSaveGeofenceModalOpen, setIsSaveGeofenceModalOpen] = useState(false);
+  const [isGeofencesListModalOpen, setIsGeofencesListModalOpen] = useState(false);
 
   const fetchAllDevices = async () => {
     try {
@@ -1099,7 +1372,7 @@ function App() {
 
 const handleAreaDrawn = async (area) => {
   if (!selectedDeviceForTravel || selectedDeviceForTravel.length === 0) return;
-
+  setCurrentArea(area);
   setLoading(true);
   try {
     const allJourneys = [];
@@ -1146,9 +1419,56 @@ const handleExitTravelRecord = () => {
   setTravelRecordMode(false);
   setSelectedDeviceForTravel([]);
   setJourneys([]);
+  setCurrentArea(null);
   setIsLiveMode(true);
   setLoading(true);
 };
+const handleSaveGeofence = async (geofenceData) => {
+  try {
+    const response = await fetch(`${config.API_BASE_URL}/api/geofences`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: geofenceData.name,
+        description: geofenceData.description,
+        min_lat: geofenceData.area.minLat,
+        max_lat: geofenceData.area.maxLat,
+        min_lng: geofenceData.area.minLng,
+        max_lng: geofenceData.area.maxLng,
+        device_ids: geofenceData.devices,
+        created_by: 'julicarolinav',
+        journeys: geofenceData.journeys
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to save geofence');
+    }
+
+    alert('✅ Geofence saved successfully!');
+  } catch (err) {
+    console.error('Error saving geofence:', err);
+    throw err;
+  }
+};
+
+const handleLoadGeofence = (geofenceData) => {
+  // Cargar la geocerca en el mapa
+  setSelectedDeviceForTravel(geofenceData.device_ids);
+  setTravelRecordMode(true);
+  setIsLiveMode(false);
+  setJourneys(geofenceData.journeys);
+  setCurrentArea({
+    minLat: geofenceData.min_lat,
+    maxLat: geofenceData.max_lat,
+    minLng: geofenceData.min_lng,
+    maxLng: geofenceData.max_lng
+  });
+  setLocationsData([]);
+  setPaths({});
+};
+
 
   useEffect(() => {
     fetchAllDevices();
@@ -1235,6 +1555,7 @@ const handleExitTravelRecord = () => {
                 journeys={journeys}
                 travelRecordDevice={selectedDeviceForTravel}
                 selectedDeviceForZoom={selectedDeviceForZoom}
+                onSaveGeofence={() => setIsSaveGeofenceModalOpen(true)}
               />
             </div>
             <div className="w-full md:w-1/4 flex flex-col gap-8 text-center animate-slide-in-right">
@@ -1248,6 +1569,7 @@ const handleExitTravelRecord = () => {
                 onOpenTravelRecord={handleOpenTravelRecord}
                 onDeviceClick={handleDeviceClick}
                 isLiveMode={isLiveMode}
+                onOpenGeofencesList={() => setIsGeofencesListModalOpen(true)}
               />
             </div>
           </>
@@ -1266,6 +1588,21 @@ const handleExitTravelRecord = () => {
         onClose={() => setIsDeviceSelectionModalOpen(false)}
         onSelectDevice={handleDeviceSelected}
         devices={allDevices}
+      />
+
+      <SaveGeofenceModal
+        isOpen={isSaveGeofenceModalOpen}
+        onClose={() => setIsSaveGeofenceModalOpen(false)}
+        onSave={handleSaveGeofence}
+        area={currentArea}
+        devices={selectedDeviceForTravel}
+        journeys={journeys}
+      />
+
+      <GeofencesListModal
+        isOpen={isGeofencesListModalOpen}
+        onClose={() => setIsGeofencesListModalOpen(false)}
+        onLoadGeofence={handleLoadGeofence}
       />
     </div>
   );

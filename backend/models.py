@@ -43,3 +43,53 @@ class ErrorResponse(BaseModel):
 class InternalErrorResponse(BaseModel):
     """Respuesta de error interno"""
     error: str
+
+class GeofenceCreate(BaseModel):
+    """Modelo para crear una geocerca"""
+    name: str
+    description: Optional[str] = None
+    min_lat: float
+    max_lat: float
+    min_lng: float
+    max_lng: float
+    device_ids: list[str]
+    created_by: Optional[str] = None
+
+class GeofenceResponse(BaseModel):
+    """Respuesta de geocerca"""
+    id: int
+    name: str
+    description: Optional[str] = None
+    min_lat: float
+    max_lat: float
+    min_lng: float
+    max_lng: float
+    device_ids: list[str]
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool
+    journey_count: Optional[int] = 0
+
+class GeofenceJourney(BaseModel):
+    """Modelo para journey de geocerca"""
+    device_id: str
+    start_time: int
+    end_time: int
+    points: list[dict]
+
+class GeofenceWithJourneys(BaseModel):
+    """Geocerca con sus journeys"""
+    id: int
+    name: str
+    description: Optional[str] = None
+    min_lat: float
+    max_lat: float
+    min_lng: float
+    max_lng: float
+    device_ids: list[str]
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool
+    journeys: list[GeofenceJourney]
