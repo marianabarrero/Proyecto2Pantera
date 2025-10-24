@@ -1477,7 +1477,7 @@ const handleSaveGeofence = async (geofenceData) => {
     throw err;
   }
 };
-// Cargar la geocerca en el mapa
+// Cargar la geocerca en el mapas
 const handleLoadGeofence = (geofenceData) => {
   // Cargar la geocerca en el mapa
   setSelectedDeviceForTravel(geofenceData.device_ids);
