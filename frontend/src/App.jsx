@@ -619,28 +619,37 @@ const MapUpdater = ({ bounds, hasUserInteracted }) => {
 };
 
 // --- Device Zoom Handler ---
+// --- Device Zoom Handler ---
 const DeviceZoomHandler = ({ deviceId, paths }) => {
   const map = useMap();
 
   useEffect(() => {
     if (deviceId && paths[deviceId] && paths[deviceId].length > 0) {
       const devicePath = paths[deviceId];
-
-      if (devicePath.length === 1) {
-        // Si solo hay un punto, hacer zoom a ese punto
-        map.flyTo(devicePath[0], 15, {
-          duration: 1.5,
-          easeLinearity: 0.25
-        });
-      } else {
-        // Si hay múltiples puntos, ajustar el mapa para mostrar todo el recorrido
-        const bounds = L.latLngBounds(devicePath);
-        map.fitBounds(bounds, {
-          padding: [50, 50],
-          maxZoom: 16,
-          duration: 1.5
-        });
-      }
+      
+      // Pequeño delay para asegurar que el mapa esté listo
+      setTimeout(() => {
+        if (devicePath.length === 1) {
+          // Si solo hay un punto, hacer zoom a ese punto
+          map.flyTo(devicePath[0], 15, {
+            duration: 1.5,
+            easeLinearity: 0.25
+          });
+        } else {
+          // Si hay múltiples puntos, ajustar el mapa para mostrar todo el recorrido
+          try {
+            const bounds = L.latLngBounds(devicePath);
+            map.fitBounds(bounds, { 
+              padding: [50, 50], 
+              maxZoom: 16,
+              animate: true,
+              duration: 1.5
+            });
+          } catch (e) {
+            console.error('Error al hacer zoom al dispositivo:', e);
+          }
+        }
+      }, 100);
     }
   }, [deviceId, paths, map]);
 
@@ -661,6 +670,12 @@ const LocationMap = ({
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [selectedJourneyIndex, setSelectedJourneyIndex] = useState(null);
+    // Desactivar MapUpdater cuando se selecciona un dispositivo
+  useEffect(() => {
+    if (selectedDeviceForZoom) {
+      setHasUserInteracted(true);
+    }
+  }, [selectedDeviceForZoom]);
 
   const centerLocation = locations.length > 0
     ? locations[0]
@@ -810,7 +825,7 @@ const LocationMap = ({
           );
         })}
 
-        <MapUpdater bounds={bounds} hasUserInteracted={hasUserInteracted} />
+        {!selectedDeviceForZoom && <MapUpdater bounds={bounds} hasUserInteracted={hasUserInteracted} />}
         <InteractionDetector />
         <JourneyZoomController journeyIndex={selectedJourneyIndex} />
       </MapContainer>
