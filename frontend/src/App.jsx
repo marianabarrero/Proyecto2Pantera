@@ -598,6 +598,7 @@ const LocationMap = ({
   travelRecordDevice
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [selectedJourneyIndex, setSelectedJourneyIndex] = useState(null);
 
   const centerLocation = locations.length > 0
     ? locations[0]
@@ -635,6 +636,30 @@ const LocationMap = ({
         map.off('dragstart', handleInteraction);
       };
     }, [map]);
+
+    return null;
+  };
+  const JourneyZoomController = ({ journeyIndex }) => {
+    const map = useMap();
+    
+    useEffect(() => {
+      if (journeyIndex !== null && journeys[journeyIndex]) {
+        const journey = journeys[journeyIndex];
+        const journeyBounds = journey.points.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]);
+        
+        if (journeyBounds.length > 0) {
+          try {
+            map.fitBounds(journeyBounds, { 
+              padding: [50, 50], 
+              maxZoom: 16,
+              duration: 1
+            });
+          } catch (e) {
+            console.error('Error al hacer zoom al journey:', e);
+          }
+        }
+      }
+    }, [journeyIndex, map]);
 
     return null;
   };
@@ -722,6 +747,7 @@ const LocationMap = ({
 
         <MapUpdater bounds={bounds} hasUserInteracted={hasUserInteracted} />
         <InteractionDetector />
+        <JourneyZoomController journeyIndex={selectedJourneyIndex} />
       </MapContainer>
 
       {!travelRecordMode && locations.length > 1 && (
@@ -750,13 +776,21 @@ const LocationMap = ({
       {journeys.map((journey, index) => {
         const startDate = new Date(journey.start_time);
         const endDate = new Date(journey.end_time);
+        const isSelected = selectedJourneyIndex === index;
+        
         return (
-          <div key={`legend-${index}`} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+          <button
+            key={`legend-${index}`}
+            onClick={() => setSelectedJourneyIndex(index)}
+            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer hover:bg-white/20 ${
+              isSelected ? 'bg-sky-600/30 border-2 border-sky-400' : 'bg-white/5'
+            }`}
+          >
             <div
               className="w-4 h-4 rounded-full flex-shrink-0"
               style={{ backgroundColor: JOURNEY_COLORS[index % JOURNEY_COLORS.length] }}
             />
-            <div className="text-white text-xs">
+            <div className="text-white text-xs text-left flex-1">
               <div className="font-semibold">
                 Journey {index + 1}
                 {journey.device_id && <span className="text-sky-400 ml-2">({journey.device_id})</span>}
@@ -775,7 +809,12 @@ const LocationMap = ({
                 })}
               </div>
             </div>
-          </div>
+            {isSelected && (
+              <div className="text-sky-400 text-lg">
+                📍
+              </div>
+            )}
+          </button>
         );
       })}
     </div>
