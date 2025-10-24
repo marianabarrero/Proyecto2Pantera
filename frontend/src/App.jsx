@@ -569,6 +569,7 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
 };
 
 // --- Map Updater ---
+// --- Map Updater ---
 const MapUpdater = ({ bounds, hasUserInteracted }) => {
   const map = useMap();
 
@@ -585,14 +586,21 @@ const MapUpdater = ({ bounds, hasUserInteracted }) => {
           duration: 1.5,
           easeLinearity: 0.25
         });
-        // --- Device Zoom Handler ---
+      }
+    }
+  }, [bounds, map, hasUserInteracted]);
+
+  return null;
+};
+
+// --- Device Zoom Handler ---
 const DeviceZoomHandler = ({ deviceId, paths }) => {
   const map = useMap();
 
   useEffect(() => {
     if (deviceId && paths[deviceId] && paths[deviceId].length > 0) {
       const devicePath = paths[deviceId];
-      
+
       if (devicePath.length === 1) {
         // Si solo hay un punto, hacer zoom a ese punto
         map.flyTo(devicePath[0], 15, {
@@ -602,20 +610,14 @@ const DeviceZoomHandler = ({ deviceId, paths }) => {
       } else {
         // Si hay múltiples puntos, ajustar el mapa para mostrar todo el recorrido
         const bounds = L.latLngBounds(devicePath);
-        map.fitBounds(bounds, { 
-          padding: [50, 50], 
+        map.fitBounds(bounds, {
+          padding: [50, 50],
           maxZoom: 16,
           duration: 1.5
         });
       }
     }
   }, [deviceId, paths, map]);
-
-  return null;
-};
-      }
-    }
-  }, [bounds, map, hasUserInteracted]);
 
   return null;
 };
