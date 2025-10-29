@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L, { Icon } from 'leaflet';
 import { ThreeDot } from 'react-loading-indicators';
 import VideoStream from './Components/VideoStream';
-import config from './config';
+
 
 // --- MUI Date Picker Imports ---
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
