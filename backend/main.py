@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from database import Database
 from udp_server import start_udp_server, stop_udp_server
+from webrtc_server import start_webrtc_server
 from models import (
     LocationData, LocationResponse, AllLocationsResponse, 
     HealthResponse, ErrorResponse, InternalErrorResponse,
@@ -47,17 +48,23 @@ app.add_middleware(
 # Variables globales para el servidor UDP
 udp_transport = None
 udp_protocol = None
+webrtc_runner = None
 
 @app.on_event("startup")
 async def startup_event():
     """Eventos al iniciar la aplicación"""
-    global udp_transport, udp_protocol
+    global udp_transport, udp_protocol, webrtc_runner
 
     try:
         await db.init_connection_pool()
         await db.create_table()
         udp_transport, udp_protocol = await start_udp_server(db)  # ✅ Pasa db aquí
+        webrtc_runner = await start_webrtc_server(
+            host='0.0.0.0',
+            port=int(os.getenv('WEBRTC_PORT', 8080))
+        )
         print(f"HTTP API escuchando en puerto {os.getenv('HTTP_PORT', 3001)}")
+        print(f"WebRTC Server escuchando en puerto {os.getenv('WEBRTC_PORT', 8080)}")
     except Exception as e:
         print(f"Error iniciando servidor: {e}")
         raise
@@ -65,9 +72,11 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Eventos al cerrar la aplicación"""
-    global udp_transport
+    global udp_transport, webrtc_runner
     if udp_transport:
         await stop_udp_server(udp_transport)
+    if webrtc_runner:
+        await webrtc_runner.cleanup()
     await db.close_connection_pool()
 
 @app.get("/api/location/latest", response_model=LocationResponse)
