@@ -242,7 +242,7 @@ const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
         </div>
 
         <div className="mb-4">
-          <label className="block text-white mb-2">Choose devices to view travel records:</label>
+          <label className="block text-white mb-2">Choose devices to view area search records:</label>
           
           <button
             onClick={handleSelectAll}
@@ -691,7 +691,7 @@ const GeofencesListModal = ({ isOpen, onClose, onLoadGeofence, onDeleteGeofence 
         ) : geofences.length === 0 ? (
           <div className="text-center text-white/60 py-12">
             <p className="text-lg mb-2">📭 No saved geofences yet</p>
-            <p className="text-sm">Create a geofence in Travel Record mode to save it</p>
+            <p className="text-sm">Create a geofence in Area Search mode to save it</p>
           </div>
         ) : (
           <div className="overflow-y-auto flex-1 space-y-3">
@@ -833,7 +833,7 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
         onClick={onOpenTravelRecord}
         className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
       >
-        <span className='text-white group-hover:text-white/90 duration-300'>Travel Record</span>
+        <span className='text-white group-hover:text-white/90 duration-300'>Area Search</span>
       </button>
 
       <button
@@ -1007,8 +1007,9 @@ const LocationMap = ({
       {travelRecordMode && (
         <div className="mb-2 p-3 bg-sky-500/20 border border-sky-500/50 rounded-xl">
           <p className="text-white text-sm text-center">
-            📍 <strong>Click twice on the map to draw a rectangle.</strong> First click = start corner, second click = end corner.
+            📍 <strong>Click on the map to set the first corner.</strong>
             <br/>
+            Move the mouse and <strong>click a second time</strong> to complete the area.
             <span className="text-xs text-white/70">Press ESC or right-click to cancel.</span>
           </p>
         </div>
@@ -1120,7 +1121,7 @@ const LocationMap = ({
   <div className="mt-4 p-4 bg-white/10 rounded-xl max-h-64 overflow-y-auto">
     <div className="flex justify-between items-center mb-3">
       <h3 className="text-white font-bold">
-        Travel Records for: {Array.isArray(travelRecordDevice) ? travelRecordDevice.join(', ') : travelRecordDevice}
+        Area Search for: {Array.isArray(travelRecordDevice) ? travelRecordDevice.join(', ') : travelRecordDevice}
       </h3>
       <button
         onClick={onSaveGeofence}
@@ -1564,7 +1565,7 @@ const handleLoadGeofence = (geofenceData) => {
                   onClick={handleExitTravelRecord}
                   className="flex items-left gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl shadow-lg transition-all font-medium"
                 >
-                  Exit Travel Record Mode
+                  Exit Area Search Mode
                 </button>
               </div>
             )}
