@@ -205,7 +205,7 @@ async def get_active_streams(sid, data):
     active_devices = list(active_streams.keys())
     await sio.emit('active_streams', {'devices': active_devices}, room=sid)
 
-async def start_webrtc_server(host='0.0.0.0', port=8080):
+async def start_webrtc_server(host='0.0.0.0', port=8081):
     """Iniciar servidor WebRTC"""
     logger.info(f"🎥 Iniciando servidor WebRTC en {host}:{port}")
     runner = web.AppRunner(app)
