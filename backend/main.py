@@ -56,7 +56,7 @@ async def startup_event():
     try:
         await db.init_connection_pool()
         await db.create_table()
-        udp_transport, udp_protocol = await start_udp_server()
+        udp_transport, udp_protocol = await start_udp_server(db)  # ✅ Pasa db aquí
         print(f"HTTP API escuchando en puerto {os.getenv('HTTP_PORT', 3001)}")
     except Exception as e:
         print(f"Error iniciando servidor: {e}")
