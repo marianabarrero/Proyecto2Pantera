@@ -927,7 +927,8 @@ const LocationMap = ({
   journeys,
   travelRecordDevice,
   selectedDeviceForZoom,
-  onSaveGeofence
+  onSaveGeofence,
+  isDrawingAllowed
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [selectedJourneyIndex, setSelectedJourneyIndex] = useState(null);
@@ -1025,7 +1026,7 @@ const LocationMap = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
-        {travelRecordMode && <RectangleDrawer onRectangleComplete={onAreaDrawn} />}
+        {travelRecordMode && isDrawingAllowed && <RectangleDrawer onRectangleComplete={onAreaDrawn} />}
         {selectedDeviceForZoom && <DeviceZoomHandler deviceId={selectedDeviceForZoom} paths={paths} />}
 
 
@@ -1201,6 +1202,7 @@ function App() {
   const [currentArea, setCurrentArea] = useState(null);
   const [isSaveGeofenceModalOpen, setIsSaveGeofenceModalOpen] = useState(false);
   const [isGeofencesListModalOpen, setIsGeofencesListModalOpen] = useState(false);
+  const [isDrawingAllowed, setIsDrawingAllowed] = useState(true);
 
   const fetchAllDevices = async () => {
     try {
@@ -1369,11 +1371,13 @@ function App() {
   setJourneys([]);
   setLocationsData([]);
   setPaths({});
+  setIsDrawingAllowed(true);
 };
 
 const handleAreaDrawn = async (area) => {
   if (!selectedDeviceForTravel || selectedDeviceForTravel.length === 0) return;
   setCurrentArea(area);
+  setIsDrawingAllowed(false);
   setLoading(true);
   try {
     const allJourneys = [];
@@ -1423,6 +1427,7 @@ const handleExitTravelRecord = () => {
   setCurrentArea(null);
   setIsLiveMode(true);
   setLoading(true);
+  setIsDrawingAllowed(true);
 };
 const handleSaveGeofence = async (geofenceData) => {
   try {
@@ -1582,6 +1587,7 @@ const handleLoadGeofence = (geofenceData) => {
                 travelRecordDevice={selectedDeviceForTravel}
                 selectedDeviceForZoom={selectedDeviceForZoom}
                 onSaveGeofence={() => setIsSaveGeofenceModalOpen(true)}
+                isDrawingAllowed={isDrawingAllowed}
               />
             </div>
             <div className="w-full md:w-1/4 flex flex-col gap-8 text-center animate-slide-in-right">
