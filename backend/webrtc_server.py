@@ -47,9 +47,69 @@ async def disconnect(sid):
         if sid in clients:
             clients.remove(sid)
 
+# ⭐ NUEVO: Evento para recibir frames de la app Android
+@sio.event
+async def video_frame(sid, data):
+    """Recibir frames del celular Android y reenviar a clientes web"""
+    try:
+        device_id = data.get('device_id')
+        
+        # Registrar que el dispositivo está activo
+        if device_id not in active_streams:
+            active_streams[device_id] = set()
+        
+        # Reenviar el frame a todos los clientes web conectados (excepto el que lo envió)
+        await sio.emit('video_frame_update', {
+            'device_id': device_id,
+            'frame_number': data.get('frame_number'),
+            'timestamp': data.get('timestamp'),
+            'width': data.get('width'),
+            'height': data.get('height'),
+            'format': data.get('format'),
+            # Nota: Los datos binarios YUV no se pueden enviar directamente por JSON
+            # La app debería convertir a Base64 o JPEG
+        }, skip_sid=sid)
+        
+    except Exception as e:
+        logger.error(f"Error procesando frame: {e}")
+
+# ⭐ NUEVO: Evento para notificar cuando un dispositivo empieza a transmitir
+@sio.event
+async def device_streaming(sid, data):
+    """Notificar que un dispositivo está transmitiendo"""
+    try:
+        device_id = data.get('device_id')
+        status = data.get('status')
+        
+        logger.info(f"📹 Dispositivo {device_id} - Status: {status}")
+        
+        if status == 'active':
+            if device_id not in active_streams:
+                active_streams[device_id] = set()
+            active_streams[device_id].add(sid)
+            
+            # Notificar a todos los clientes web
+            await sio.emit('stream_available', {
+                'device_id': device_id,
+                'status': 'active'
+            })
+        elif status == 'inactive':
+            if device_id in active_streams and sid in active_streams[device_id]:
+                active_streams[device_id].remove(sid)
+                if not active_streams[device_id]:
+                    del active_streams[device_id]
+            
+            await sio.emit('stream_unavailable', {
+                'device_id': device_id,
+                'status': 'inactive'
+            })
+            
+    except Exception as e:
+        logger.error(f"Error en device_streaming: {e}")
+
 @sio.event
 async def offer(sid, data):
-    """Manejar oferta WebRTC del celular (Android)"""
+    """Manejar oferta WebRTC del celular (Android) - MANTENER PARA RETROCOMPATIBILIDAD"""
     try:
         device_id = data.get('device_id')
         offer_sdp = data.get('sdp')
