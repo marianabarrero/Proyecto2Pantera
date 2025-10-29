@@ -199,7 +199,10 @@ async def get_area_records(
 
 # ==================== GEOFENCES ENDPOINTS ====================
 
-@app.post("/api/geofences", response_model=GeofenceResponse)
+@app.post("/api/geofences", response_model=GeofenceResponse)  #al hacer click en save geofence
+#el backend guarda en PostgreSQL:
+#Una fila en la tabla geofences con el área y metadatos
+#Múltiples filas en geofence_journeys con cada recorrido
 async def create_geofence(request: GeofenceSaveRequest):
     """Crea una nueva geocerca"""
     try:
@@ -238,7 +241,7 @@ async def get_geofences(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error obteniendo geocercas")
 
-@app.get("/api/geofences/{geofence_id}", response_model=GeofenceWithJourneys)
+@app.get("/api/geofences/{geofence_id}", response_model=GeofenceWithJourneys) #al hacer click en en load
 async def get_geofence(geofence_id: int):
     """Obtiene una geocerca específica con sus journeys"""
     try:
@@ -279,7 +282,7 @@ async def update_geofence(geofence_id: int, update_data: dict):
 
 @app.delete("/api/geofences/{geofence_id}")
 async def delete_geofence(geofence_id: int):
-    """Elimina una geocerca (soft delete)"""
+    """Elimina una geocerca """
     try:
         print(f"Eliminando geocerca ID: {geofence_id}")
         success = await db.delete_geofence(geofence_id)

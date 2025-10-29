@@ -194,11 +194,13 @@ class Database:
         async with self.pool.acquire() as connection:
             async with connection.transaction():
                 # Insertar geocerca
+                #el id se genera automáticamente por la base de datos, es necesario para vincular los journeys
                 query = """
                 INSERT INTO geofences (name, description, min_lat, max_lat, min_lng, max_lng, device_ids, created_by)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 RETURNING id, name, description, min_lat, max_lat, min_lng, max_lng, device_ids, created_by, created_at, updated_at, is_active;
                 """
+                # extrae el ID generado
                 record = await connection.fetchrow(
                     query,
                     geofence_data['name'],
