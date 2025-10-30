@@ -1,197 +1,157 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import PropTypes from 'prop-types';
 
-const VideoStream = ({ deviceId, serverUrl }) => {
-  const canvasRef = useRef(null);
-  const [socket, setSocket] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState(null);
-  const [frameCount, setFrameCount] = useState(0);
-  const [fps, setFps] = useState(0);
-  const lastFrameTimeRef = useRef(Date.now());
-  const frameCounterRef = useRef(0);
+function VideoStream({ deviceId, serverUrl }) {
+    const videoRef = useRef(null);
+    const pcRef = useRef(null); // PeerConnection
+    const socketRef = useRef(null);
+    const [status, setStatus] = useState('Conectando...');
 
-  useEffect(() => {
-    // Conectar a Socket.IO
-    const newSocket = io(serverUrl, {
-      transports: ['websocket'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
-    });
+    useEffect(() => {
+        if (!deviceId || !serverUrl) return;
 
-    newSocket.on('connect', () => {
-      console.log('✅ Conectado al servidor de video');
-      setIsConnected(true);
-      setError(null);
-      
-      // Solicitar frames del dispositivo
-      newSocket.emit('request_stream', { device_id: deviceId });
-    });
+        // 1. Conectar al socket
+        const socket = io(serverUrl, {
+            query: { deviceId },
+            transports: ['websocket'],
+        });
+        socketRef.current = socket;
 
-    newSocket.on('disconnect', () => {
-      console.log('❌ Desconectado del servidor');
-      setIsConnected(false);
-    });
+        // Configuración de PeerConnection
+        const pcConfig = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }], // Servidor STUN de Google
+        };
+        const pc = new RTCPeerConnection(pcConfig);
+        pcRef.current = pc;
 
-    newSocket.on('stream_available', (data) => {
-      console.log('🎥 Stream disponible:', data);
-      if (data.device_id === deviceId) {
-        setError(null);
-      }
-    });
+        // 2. Manejador para cuando se recibe un track de video
+        pc.ontrack = (event) => {
+            console.log('Track de video recibido', event.streams);
+            if (videoRef.current && event.streams.length > 0) {
+                videoRef.current.srcObject = event.streams[0];
+                setStatus('Video en vivo');
+            }
+        };
 
-    newSocket.on('stream_unavailable', (data) => {
-      console.log('❌ Stream no disponible:', data);
-      if (data.device_id === deviceId) {
-        setError(`El dispositivo ${deviceId} no está transmitiendo`);
-      }
-    });
+        // 3. Manejador para candidatos ICE
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                console.log('Enviando candidato ICE');
+                socket.emit('ice_candidate', {
+                    candidate: event.candidate.candidate,
+                    sdpMid: event.candidate.sdpMid,
+                    sdpMLineIndex: event.candidate.sdpMLineIndex,
+                });
+            }
+        };
 
-    // ⭐ NUEVO: Escuchar frames de video de la app Android
-    newSocket.on('video_frame_update', (data) => {
-      if (data.device_id === deviceId && canvasRef.current) {
-        drawFrameOnCanvas(data);
-        setFrameCount(prev => prev + 1);
-        
-        // Calcular FPS
-        frameCounterRef.current++;
-        const now = Date.now();
-        const elapsed = now - lastFrameTimeRef.current;
-        if (elapsed >= 1000) {
-          setFps(Math.round((frameCounterRef.current * 1000) / elapsed));
-          frameCounterRef.current = 0;
-          lastFrameTimeRef.current = now;
-        }
-      }
-    });
+        pc.onconnectionstatechange = () => {
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+                setStatus('Conexión perdida');
+            } else if (pc.connectionState === 'connected') {
+                setStatus('Video en vivo');
+            } else {
+                setStatus(pc.connectionState);
+            }
+        };
 
-    newSocket.on('stream_ended', (data) => {
-      if (data.device_id === deviceId) {
-        setError('Transmisión finalizada');
-      }
-    });
+        // 4. Listeners del Socket
+        socket.on('connect', () => {
+            console.log('Socket conectado. Solicitando stream...');
+            setStatus('Solicitando stream...');
+            // Iniciar la negociación WebRTC
+            startWebRTC();
+        });
 
-    newSocket.on('error', (data) => {
-      console.error('❌ Error del servidor:', data);
-      setError(data.message);
-    });
+        socket.on('answer', async (sdp) => {
+            try {
+                console.log('Respuesta SDP recibida');
+                await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp }));
+            } catch (error) {
+                console.error('Error al establecer RemoteDescription:', error);
+            }
+        });
 
-    setSocket(newSocket);
+        socket.on('ice_candidate', async (candidateData) => {
+            try {
+                console.log('Candidato ICE recibido');
+                const candidate = new RTCIceCandidate({
+                    candidate: candidateData.candidate,
+                    sdpMid: candidateData.sdpMid,
+                    sdpMLineIndex: candidateData.sdpMLineIndex,
+                });
+                await pc.addIceCandidate(candidate);
+            } catch (error) {
+                console.error('Error al añadir candidato ICE:', error);
+            }
+        });
 
-    return () => {
-      newSocket.close();
-    };
-  }, [deviceId, serverUrl]);
+        socket.on('disconnect', () => {
+            setStatus('Desconectado');
+            console.log('Socket desconectado');
+        });
 
-  const drawFrameOnCanvas = (frameData) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+        socket.on('connect_error', (err) => {
+            setStatus('Error de conexión');
+            console.error('Error de conexión con Socket.IO:', err.message);
+        });
 
-    const ctx = canvas.getContext('2d');
-    
-    // Establecer dimensiones del canvas
-    if (canvas.width !== frameData.width || canvas.height !== frameData.height) {
-      canvas.width = frameData.width || 640;
-      canvas.height = frameData.height || 480;
-    }
+        // 5. Función para iniciar WebRTC (crear oferta)
+        const startWebRTC = async () => {
+            try {
+                // Necesitamos recibir video
+                pc.addTransceiver('video', { direction: 'recvonly' });
 
-    // Por ahora dibujamos un placeholder (ya que los datos YUV necesitan conversión)
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Dibujar información del frame
-    ctx.fillStyle = '#00ff00';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`📹 LIVE - Frame #${frameData.frame_number}`, canvas.width / 2, 40);
-    
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(`Device: ${deviceId}`, canvas.width / 2, 80);
-    ctx.fillText(`Resolution: ${frameData.width}x${frameData.height}`, canvas.width / 2, 110);
-    ctx.fillText(`Format: ${frameData.format}`, canvas.width / 2, 140);
-    ctx.fillText(`Timestamp: ${new Date(frameData.timestamp).toLocaleTimeString()}`, canvas.width / 2, 170);
-    
-    // Dibujar borde verde para indicar que está recibiendo frames
-    ctx.strokeStyle = '#00ff00';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(0, 0, canvas.width, canvas.height);
-  };
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
 
-  return (
-    <div style={{ 
-      width: '100%', 
-      maxWidth: '800px', 
-      margin: '0 auto',
-      backgroundColor: '#000',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-    }}>
-      <div style={{
-        padding: '10px',
-        backgroundColor: '#1a1a1a',
-        color: '#fff',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <span>📹 Device: {deviceId}</span>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <span style={{
-            padding: '4px 12px',
-            borderRadius: '12px',
-            fontSize: '12px',
-            backgroundColor: '#666',
-            color: '#fff'
-          }}>
-            {fps} FPS
-          </span>
-          <span style={{
-            padding: '4px 12px',
-            borderRadius: '12px',
-            fontSize: '12px',
-            backgroundColor: isConnected ? '#10b981' : '#ef4444'
-          }}>
-            {isConnected ? `● LIVE (${frameCount})` : '● Disconnected'}
-          </span>
+                console.log('Enviando oferta SDP');
+                socket.emit('offer', { sdp: offer.sdp, type: offer.type });
+            } catch (error) {
+                console.error('Error al crear la oferta WebRTC:', error);
+            }
+        };
+
+        // 6. Cleanup
+        return () => {
+            console.log('Limpiando VideoStream...');
+            if (pc) {
+                pc.close();
+            }
+            if (socket) {
+                socket.disconnect();
+            }
+        };
+    }, [deviceId, serverUrl]);
+
+    return (
+        <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: '#000' }}>
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+            <div style={{
+                position: 'absolute',
+                top: 10,
+                left: 10,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                color: 'white',
+                padding: '5px 10px',
+                borderRadius: '5px',
+                fontSize: '14px'
+            }}>
+                {status}
+            </div>
         </div>
-      </div>
-      
-      {error && (
-        <div style={{
-          padding: '12px',
-          backgroundColor: '#ef4444',
-          color: '#fff',
-          textAlign: 'center',
-          fontWeight: 'bold'
-        }}>
-          ⚠️ {error}
-        </div>
-      )}
-      
-      <canvas
-        ref={canvasRef}
-        style={{
-          width: '100%',
-          height: 'auto',
-          display: 'block',
-          backgroundColor: '#000'
-        }}
-      />
-      
-      <div style={{
-        padding: '8px',
-        backgroundColor: '#1a1a1a',
-        color: '#888',
-        fontSize: '12px',
-        textAlign: 'center'
-      }}>
-        💡 Mostrando metadata de frames (conversión YUV pendiente)
-      </div>
-    </div>
-  );
+    );
+}
+
+VideoStream.propTypes = {
+    deviceId: PropTypes.string.isRequired,
+    serverUrl: PropTypes.string.isRequired,
 };
 
 export default VideoStream;
