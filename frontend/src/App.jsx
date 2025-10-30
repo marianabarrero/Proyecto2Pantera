@@ -1643,7 +1643,7 @@ const handleLoadGeofence = (geofenceData) => {
                     
                     <VideoStream
                     deviceId={selectedDeviceForVideo}
-                    serverUrl={`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${config.API_BASE_URL.replace('http://', '').replace('https://', '').split(':')[0]}:8443`}
+                    serverUrl={`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${config.API_BASE_URL.replace('http://', '').replace('https://', '').split(':')[0]}:8080`}
                     />
                     
                     <div className="mt-4 flex gap-3">
