@@ -614,6 +614,7 @@ const SaveGeofenceModal = ({ isOpen, onClose, onSave, area, devices, journeys })
 };
 
 // --- Modal para Ver Geocercas Guardadas ---
+//--- Modal para Ver Geocercas Guardadas ---
 const GeofencesListModal = ({ isOpen, onClose, onLoadGeofence, onDeleteGeofence }) => {
   const [geofences, setGeofences] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
