@@ -10,6 +10,12 @@ from aiortc.contrib.media import MediaRelay
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import aiohttp
+
+# Configurar IPs de los otros 3 servidores
+OTHER_SERVERS = []
+
+
 # Configurar Socket.IO
 sio = socketio.AsyncServer(
     async_mode='aiohttp',
@@ -53,6 +59,7 @@ async def video_frame(sid, data):
     """Recibir frames del celular Android y reenviar a clientes web"""
     try:
         device_id = data.get('device_id')
+        frame_number = data.get('frame_number', 0)
         
         # Registrar que el dispositivo está activo
         if device_id not in active_streams:
@@ -61,14 +68,20 @@ async def video_frame(sid, data):
         # Reenviar el frame a todos los clientes web conectados (excepto el que lo envió)
         await sio.emit('video_frame_update', {
             'device_id': device_id,
-            'frame_number': data.get('frame_number'),
+            'frame_number': frame_number,
             'timestamp': data.get('timestamp'),
             'width': data.get('width'),
             'height': data.get('height'),
             'format': data.get('format'),
-            # Nota: Los datos binarios YUV no se pueden enviar directamente por JSON
-            # La app debería convertir a Base64 o JPEG
         }, skip_sid=sid)
+        
+        # Log cada 30 frames
+        if frame_number % 30 == 0:
+            logger.info(f"📹 Frame #{frame_number} de {device_id} recibido")
+        
+        # ⭐ RETRANSMITIR A OTROS SERVIDORES (cada 2 frames) ⭐
+        if OTHER_SERVERS and frame_number % 2 == 0:
+            asyncio.create_task(relay_frame_to_servers(data))
         
     except Exception as e:
         logger.error(f"Error procesando frame: {e}")
@@ -204,6 +217,51 @@ async def get_active_streams(sid, data):
     """Obtener lista de streams activos"""
     active_devices = list(active_streams.keys())
     await sio.emit('active_streams', {'devices': active_devices}, room=sid)
+
+    # ⭐ AGREGAR ESTA FUNCIÓN COMPLETA ⭐
+async def relay_frame_to_servers(frame_data):
+    """Retransmitir frame a otros servidores"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for server_url in OTHER_SERVERS:
+                task = session.post(
+                    f"{server_url}/api/relay/video_frame",
+                    json=frame_data,
+                    timeout=aiohttp.ClientTimeout(total=1)
+                )
+                tasks.append(task)
+            
+            # Enviar sin esperar respuesta
+            await asyncio.gather(*tasks, return_exceptions=True)
+            
+    except Exception as e:
+        logger.error(f"Error retransmitiendo frame: {e}")
+
+# ⭐ AGREGAR ESTE ENDPOINT HTTP ⭐
+@app.route('/api/relay/video_frame', methods=['POST'])
+async def relay_video_frame_endpoint(request):
+    """Recibir frame retransmitido de otro servidor"""
+    try:
+        data = await request.json()
+        
+        # Emitir a clientes web locales
+        await sio.emit('video_frame_update', data)
+        
+        return web.Response(
+            text='{"status":"ok"}',
+            content_type="application/json",
+            status=200
+        )
+    except Exception as e:
+        logger.error(f"Error en relay endpoint: {e}")
+        return web.Response(
+            text=f'{{"error":"{str(e)}"}}',
+            content_type="application/json",
+            status=500
+        )
+
+
 
 async def start_webrtc_server(host='0.0.0.0', port=8081):
     """Iniciar servidor WebRTC"""
