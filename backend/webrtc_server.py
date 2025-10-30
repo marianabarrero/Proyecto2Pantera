@@ -4,24 +4,23 @@ import logging
 from typing import Dict, Set
 from aiohttp import web
 import socketio
-from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
+import aiohttp
+from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-import aiohttp
-
-# Configurar IPs de los otros 3 servidores
+# ⭐ URLs de los otros 3 servidores ⭐
+# CAMBIAR SEGÚN EL SERVIDOR:
 OTHER_SERVERS = []
-
 
 # Configurar Socket.IO
 sio = socketio.AsyncServer(
     async_mode='aiohttp',
     cors_allowed_origins='*',
     logger=True,
-    engineio_logger=True
+    engineio_logger=False
 )
 
 app = web.Application()
@@ -30,7 +29,7 @@ sio.attach(app)
 # Almacenar conexiones activas
 pcs: Dict[str, RTCPeerConnection] = {}
 relay = MediaRelay()
-active_streams: Dict[str, Set[str]] = {}  # device_id -> set of client_ids
+active_streams: Dict[str, Set[str]] = {}
 
 @sio.event
 async def connect(sid, environ):
@@ -43,29 +42,24 @@ async def disconnect(sid):
     """Cliente web se desconecta"""
     logger.info(f"Cliente web desconectado: {sid}")
     
-    # Limpiar recursos
     if sid in pcs:
         await pcs[sid].close()
         del pcs[sid]
     
-    # Remover de streams activos
     for device_id, clients in active_streams.items():
         if sid in clients:
             clients.remove(sid)
 
-# ⭐ NUEVO: Evento para recibir frames de la app Android
 @sio.event
 async def video_frame(sid, data):
-    """Recibir frames del celular Android y reenviar a clientes web"""
+    """Recibir frames del celular Android"""
     try:
         device_id = data.get('device_id')
         frame_number = data.get('frame_number', 0)
         
-        # Registrar que el dispositivo está activo
         if device_id not in active_streams:
             active_streams[device_id] = set()
         
-        # Reenviar el frame a todos los clientes web conectados (excepto el que lo envió)
         await sio.emit('video_frame_update', {
             'device_id': device_id,
             'frame_number': frame_number,
@@ -75,21 +69,36 @@ async def video_frame(sid, data):
             'format': data.get('format'),
         }, skip_sid=sid)
         
-        # Log cada 30 frames
         if frame_number % 30 == 0:
-            logger.info(f"📹 Frame #{frame_number} de {device_id} recibido")
+            logger.info(f"📹 Frame #{frame_number} de {device_id}")
         
-        # ⭐ RETRANSMITIR A OTROS SERVIDORES (cada 2 frames) ⭐
         if OTHER_SERVERS and frame_number % 2 == 0:
             asyncio.create_task(relay_frame_to_servers(data))
         
     except Exception as e:
         logger.error(f"Error procesando frame: {e}")
 
-# ⭐ NUEVO: Evento para notificar cuando un dispositivo empieza a transmitir
+async def relay_frame_to_servers(frame_data):
+    """Retransmitir frame a otros servidores"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for server_url in OTHER_SERVERS:
+                task = session.post(
+                    f"{server_url}/api/relay/video_frame",
+                    json=frame_data,
+                    timeout=aiohttp.ClientTimeout(total=1)
+                )
+                tasks.append(task)
+            
+            await asyncio.gather(*tasks, return_exceptions=True)
+            
+    except Exception as e:
+        logger.error(f"Error retransmitiendo: {e}")
+
 @sio.event
 async def device_streaming(sid, data):
-    """Notificar que un dispositivo está transmitiendo"""
+    """Dispositivo transmitiendo"""
     try:
         device_id = data.get('device_id')
         status = data.get('status')
@@ -101,7 +110,6 @@ async def device_streaming(sid, data):
                 active_streams[device_id] = set()
             active_streams[device_id].add(sid)
             
-            # Notificar a todos los clientes web
             await sio.emit('stream_available', {
                 'device_id': device_id,
                 'status': 'active'
@@ -121,86 +129,11 @@ async def device_streaming(sid, data):
         logger.error(f"Error en device_streaming: {e}")
 
 @sio.event
-async def offer(sid, data):
-    """Manejar oferta WebRTC del celular (Android) - MANTENER PARA RETROCOMPATIBILIDAD"""
-    try:
-        device_id = data.get('device_id')
-        offer_sdp = data.get('sdp')
-        
-        logger.info(f"Oferta recibida de dispositivo: {device_id}")
-        
-        # Crear nueva conexión peer
-        pc = RTCPeerConnection()
-        pcs[sid] = pc
-        
-        @pc.on("track")
-        async def on_track(track):
-            """Cuando recibimos video del celular"""
-            logger.info(f"Track de video recibido de {device_id}: {track.kind}")
-            
-            if track.kind == "video":
-                # Registrar stream activo
-                if device_id not in active_streams:
-                    active_streams[device_id] = set()
-                active_streams[device_id].add(sid)
-                
-                # Notificar a clientes web que hay un nuevo stream disponible
-                await sio.emit('stream_available', {
-                    'device_id': device_id,
-                    'status': 'active'
-                })
-                
-                # Relay del stream a clientes web
-                relayed_track = relay.subscribe(track)
-                
-                @pc.on("connectionstatechange")
-                async def on_connectionstatechange():
-                    logger.info(f"Estado de conexión: {pc.connectionState}")
-                    if pc.connectionState == "failed" or pc.connectionState == "closed":
-                        await sio.emit('stream_ended', {'device_id': device_id})
-        
-        # Configurar la oferta
-        await pc.setRemoteDescription(
-            RTCSessionDescription(sdp=offer_sdp['sdp'], type=offer_sdp['type'])
-        )
-        
-        # Crear respuesta
-        answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-        
-        # Enviar respuesta al celular
-        await sio.emit('answer', {
-            'device_id': device_id,
-            'sdp': {
-                'type': pc.localDescription.type,
-                'sdp': pc.localDescription.sdp
-            }
-        }, room=sid)
-        
-        logger.info(f"Respuesta enviada a dispositivo: {device_id}")
-        
-    except Exception as e:
-        logger.error(f"Error procesando oferta: {e}")
-        await sio.emit('error', {'message': str(e)}, room=sid)
-
-@sio.event
-async def ice_candidate(sid, data):
-    """Manejar candidatos ICE"""
-    try:
-        if sid in pcs:
-            candidate = data.get('candidate')
-            await pcs[sid].addIceCandidate(candidate)
-            logger.info(f"Candidato ICE agregado para {sid}")
-    except Exception as e:
-        logger.error(f"Error agregando candidato ICE: {e}")
-
-@sio.event
 async def request_stream(sid, data):
-    """Cliente web solicita stream de un dispositivo"""
+    """Cliente web solicita stream"""
     device_id = data.get('device_id')
     logger.info(f"Cliente {sid} solicita stream de {device_id}")
     
-    # Notificar que el stream está disponible si existe
     if device_id in active_streams and active_streams[device_id]:
         await sio.emit('stream_available', {
             'device_id': device_id,
@@ -214,63 +147,59 @@ async def request_stream(sid, data):
 
 @sio.event
 async def get_active_streams(sid, data):
-    """Obtener lista de streams activos"""
+    """Obtener streams activos"""
     active_devices = list(active_streams.keys())
     await sio.emit('active_streams', {'devices': active_devices}, room=sid)
 
-    # ⭐ AGREGAR ESTA FUNCIÓN COMPLETA ⭐
-async def relay_frame_to_servers(frame_data):
-    """Retransmitir frame a otros servidores"""
-    try:
-        async with aiohttp.ClientSession() as session:
-            tasks = []
-            for server_url in OTHER_SERVERS:
-                task = session.post(
-                    f"{server_url}/api/relay/video_frame",
-                    json=frame_data,
-                    timeout=aiohttp.ClientTimeout(total=1)
-                )
-                tasks.append(task)
-            
-            # Enviar sin esperar respuesta
-            await asyncio.gather(*tasks, return_exceptions=True)
-            
-    except Exception as e:
-        logger.error(f"Error retransmitiendo frame: {e}")
-
-# ⭐ AGREGAR ESTE ENDPOINT HTTP ⭐
-@app.route('/api/relay/video_frame', methods=['POST'])
+# ⭐ ENDPOINTS HTTP (sintaxis correcta de aiohttp) ⭐
 async def relay_video_frame_endpoint(request):
     """Recibir frame retransmitido de otro servidor"""
     try:
         data = await request.json()
-        
-        # Emitir a clientes web locales
         await sio.emit('video_frame_update', data)
-        
         return web.Response(
             text='{"status":"ok"}',
             content_type="application/json",
             status=200
         )
     except Exception as e:
-        logger.error(f"Error en relay endpoint: {e}")
+        logger.error(f"Error en relay: {e}")
         return web.Response(
             text=f'{{"error":"{str(e)}"}}',
             content_type="application/json",
             status=500
         )
 
-
+async def health_check(request):
+    """Health check del servidor de video"""
+    return web.Response(
+        text=json.dumps({
+            "status": "healthy",
+            "service": "webrtc_server",
+            "active_devices": len(active_streams),
+            "other_servers_configured": len(OTHER_SERVERS)
+        }),
+        content_type="application/json"
+    )
 
 async def start_webrtc_server(host='0.0.0.0', port=8081):
     """Iniciar servidor WebRTC"""
+    
+    # ⭐ Registrar rutas HTTP ⭐
+    app.router.add_post('/api/relay/video_frame', relay_video_frame_endpoint)
+    app.router.add_get('/health', health_check)
+    
     logger.info(f"🎥 Iniciando servidor WebRTC en {host}:{port}")
+    logger.info(f"📡 Servidores configurados para retransmisión: {len(OTHER_SERVERS)}")
+    
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, host, port)
     await site.start()
+    
     logger.info(f"✅ Servidor WebRTC iniciado: ws://{host}:{port}")
+    logger.info(f"📊 Health check: http://{host}:{port}/health")
+    
     return runner
 
 if __name__ == '__main__':
