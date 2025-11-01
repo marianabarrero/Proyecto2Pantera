@@ -70,6 +70,8 @@ async def register_broadcaster(sid, data):
     })
     
     logger.info(f"✅ Broadcaster {device_id} listo para transmitir")
+    # Alias para compatibilidad con guiones
+sio.on('register-broadcaster', register_broadcaster)
 
 # ⭐ NUEVO: NAVEGADOR SE REGISTRA COMO VIEWER ⭐
 @sio.event
