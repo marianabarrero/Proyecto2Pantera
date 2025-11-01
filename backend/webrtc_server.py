@@ -185,7 +185,7 @@ async def get_active_devices(request):
         content_type="application/json"
     )
 
-async def start_webrtc_server(host='0.0.0.0', port=8080):
+async def start_webrtc_server(host='0.0.0.0', port=8081):
     """Iniciar servidor WebRTC"""
     
     # Registrar rutas HTTP
