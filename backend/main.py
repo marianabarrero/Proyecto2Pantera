@@ -309,7 +309,7 @@ async def delete_geofence(geofence_id: int):
 
 @app.get("/api/health", response_model=HealthResponse)
 async def health_check():
-    """Endpoint de health check"""
+    """Endpoint de health check """
     return HealthResponse(
         status="healthy",
         timestamp=datetime.now().isoformat()
