@@ -1648,7 +1648,7 @@ const handleLoadGeofence = (geofenceData) => {
                     />
                     
                     <div className="mt-4 flex gap-3">
-                      {/* Selector de dispositivo si hay múltiples ooo*/}
+                      {/* Selector de dispositivo si hay múltiples ooo */}
                       {activeDeviceIds.length > 1 && (
                         <select
                           value={selectedDeviceForVideo}
