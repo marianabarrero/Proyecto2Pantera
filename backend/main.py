@@ -64,7 +64,7 @@ async def startup_event():
             port=int(os.getenv('WEBRTC_PORT', 8080))
         )
         print(f"HTTP API escuchando en puerto {os.getenv('HTTP_PORT', 3001)}")
-        print(f"WebRTC Server escuchando en puerto {os.getenv('WEBRTC_PORT', 8080)}")
+        print(f"WebRTC Server escuchando en puerto 8081")
     except Exception as e:
         print(f"Error iniciando servidor: {e}")
         raise
@@ -318,5 +318,5 @@ async def health_check():
 # Iniciar servidor (debe estar al FINAL)
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv('HTTP_PORT', 3001))
+    port =8081
     uvicorn.run(app, host="0.0.0.0", port=port)
