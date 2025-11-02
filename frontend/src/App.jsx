@@ -1644,7 +1644,7 @@ const handleLoadGeofence = (geofenceData) => {
                     
                     <VideoStream
                     deviceId={selectedDeviceForVideo}
-                    serverUrl={`${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${config.API_BASE_URL.replace('http://', '').replace('https://', '').split(':')[0]}:8443`}
+                    serverUrl={import.meta.env.VITE_WEBRTC_URL || 'ws://panteratracker.me:8081'}
                     />
                     
                     <div className="mt-4 flex gap-3">
