@@ -16,7 +16,7 @@ import dayjs from 'dayjs';
 
 import './App.css';
 
-// --- Configuración Básica ---
+// --- Configuración Básicsa ---
 const config = {
   API_BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
   APP_NAME: 'Pantera Tracker ',
