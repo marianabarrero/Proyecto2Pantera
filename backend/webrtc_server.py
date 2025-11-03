@@ -25,9 +25,11 @@ sio = socketio.AsyncServer(
 app = web.Application()
 sio.attach(app)
 
-# ⭐ NUEVAS ESTRUCTURAS DE DATOS ⭐
+# ⭐ ESTRUCTURAS DE DATOS MEJORADAS ⭐
 active_broadcasters: Dict[str, str] = {}  # deviceId -> socketId
 active_viewers: Dict[str, Dict] = {}      # viewerId -> { socketId, watchingDevice }
+# ⭐ NUEVO: Rastrear viewers por broadcaster ⭐
+broadcaster_viewers: Dict[str, Set[str]] = {}  # deviceId -> Set[viewerSocketId]
 
 @sio.event
 async def connect(sid, environ):
@@ -44,6 +46,11 @@ async def disconnect(sid):
     for device_id, broadcaster_sid in list(active_broadcasters.items()):
         if broadcaster_sid == sid:
             del active_broadcasters[device_id]
+            
+            # ⭐ NUEVO: Limpiar viewers asociados ⭐
+            if device_id in broadcaster_viewers:
+                del broadcaster_viewers[device_id]
+            
             await sio.emit('broadcaster-disconnected', {
                 'deviceId': device_id
             })
@@ -53,6 +60,20 @@ async def disconnect(sid):
     # Limpiar viewer si es uno
     for viewer_id, viewer_data in list(active_viewers.items()):
         if viewer_data['socketId'] == sid:
+            watching_device = viewer_data.get('watchingDevice')
+            
+            # ⭐ NUEVO: Notificar al broadcaster que el viewer se desconectó ⭐
+            if watching_device and watching_device in active_broadcasters:
+                broadcaster_sid = active_broadcasters[watching_device]
+                await sio.emit('viewer-disconnected', {
+                    'viewerId': sid
+                }, room=broadcaster_sid)
+                logger.info(f"📤 Notificado a broadcaster {watching_device} que viewer {sid} se desconectó")
+                
+                # Remover de la lista de viewers del broadcaster
+                if watching_device in broadcaster_viewers:
+                    broadcaster_viewers[watching_device].discard(sid)
+            
             del active_viewers[viewer_id]
             logger.info(f"🖥️ Viewer {viewer_id} desconectado")
             break
@@ -65,6 +86,10 @@ async def register_broadcaster(sid, data):
     logger.info(f"📱 Broadcaster registrado: {device_id} (sid: {sid})")
     
     active_broadcasters[device_id] = sid
+    
+    # ⭐ NUEVO: Inicializar set de viewers para este broadcaster ⭐
+    if device_id not in broadcaster_viewers:
+        broadcaster_viewers[device_id] = set()
     
     # Notificar a todos los clientes web que hay un nuevo broadcaster
     await sio.emit('broadcaster-available', {
@@ -113,6 +138,13 @@ async def request_stream(sid, data):
                 viewer_data['watchingDevice'] = device_id
                 break
         
+        # ⭐ NUEVO: Agregar viewer al set del broadcaster ⭐
+        if device_id not in broadcaster_viewers:
+            broadcaster_viewers[device_id] = set()
+        broadcaster_viewers[device_id].add(sid)
+        
+        logger.info(f"📊 Viewers activos para {device_id}: {len(broadcaster_viewers[device_id])}")
+        
         # Notificar al broadcaster (Android) que hay un nuevo viewer
         await sio.emit('viewer-joined', {
             'viewerId': sid,
@@ -143,7 +175,7 @@ async def offer(sid, data):
         'sdp': sdp
     }, room=target)
 
-# ⭐ NUEVO: RETRANSMITIR ANSWER DE NAVEGADOR A ANDROID ⭐
+# ⭐ MODIFICADO: RETRANSMITIR ANSWER DE NAVEGADOR A ANDROID ⭐
 @sio.event
 async def answer(sid, data):
     """Retransmitir answer de Navegador a Android"""
@@ -152,12 +184,13 @@ async def answer(sid, data):
     
     logger.info(f"📨 Retransmitiendo ANSWER de {sid} a {target}")
     
+    # ⭐ NUEVO: Incluir el sender ID para que Android sepa de qué viewer viene ⭐
     await sio.emit('answer', {
         'sender': sid,
         'sdp': sdp
     }, room=target)
 
-# ⭐ NUEVO: RETRANSMITIR ICE CANDIDATES ⭐
+# ⭐ MODIFICADO: RETRANSMITIR ICE CANDIDATES ⭐
 @sio.event
 async def ice_candidate(sid, data):
     """Retransmitir ICE candidates entre Android y Navegador"""
@@ -166,6 +199,7 @@ async def ice_candidate(sid, data):
     
     logger.info(f"🧊 Retransmitiendo ICE de {sid} a {target}")
     
+    # ⭐ NUEVO: Incluir el sender ID para que Android sepa de qué viewer viene ⭐
     await sio.emit('ice-candidate', {
         'sender': sid,
         'candidate': candidate
@@ -177,13 +211,20 @@ sio.on('ice-candidate', ice_candidate)
 # ⭐ ENDPOINTS HTTP ⭐
 async def health_check(request):
     """Health check del servidor de video"""
+    # ⭐ NUEVO: Incluir estadísticas de viewers por broadcaster ⭐
+    viewers_per_broadcaster = {
+        device_id: len(viewers)
+        for device_id, viewers in broadcaster_viewers.items()
+    }
+    
     return web.Response(
         text=json.dumps({
             "status": "healthy",
             "service": "webrtc_server",
             "active_broadcasters": len(active_broadcasters),
             "active_viewers": len(active_viewers),
-            "broadcaster_devices": list(active_broadcasters.keys())
+            "broadcaster_devices": list(active_broadcasters.keys()),
+            "viewers_per_broadcaster": viewers_per_broadcaster
         }),
         content_type="application/json"
     )
