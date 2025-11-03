@@ -87,7 +87,7 @@ const RectangleDrawer = ({ onRectangleComplete }) => {
       map.scrollWheelZoom.disable();
       map.boxZoom.disable();
       map.keyboard.disable();
-      
+
       // Cambiar cursor
       map.getContainer().style.cursor = 'crosshair';
     } else {
@@ -97,7 +97,7 @@ const RectangleDrawer = ({ onRectangleComplete }) => {
       map.scrollWheelZoom.enable();
       map.boxZoom.enable();
       map.keyboard.enable();
-      
+
       // Restaurar cursor
       map.getContainer().style.cursor = '';
     }
@@ -245,14 +245,13 @@ const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
 
         <div className="mb-4">
           <label className="block text-white mb-2">Choose devices to view area search records:</label>
-          
+
           <button
             onClick={handleSelectAll}
-            className={`w-full mb-3 px-4 py-3 rounded-xl font-semibold transition-all ${
-              allSelected 
-                ? 'bg-sky-600 hover:bg-sky-700 text-white' 
+            className={`w-full mb-3 px-4 py-3 rounded-xl font-semibold transition-all ${allSelected
+                ? 'bg-sky-600 hover:bg-sky-700 text-white'
                 : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-            }`}
+              }`}
           >
             {allSelected ? '✓ All Devices Selected' : 'Select All Devices'}
           </button>
@@ -260,11 +259,10 @@ const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
           <div className="max-h-60 overflow-y-auto bg-white/10 border border-white/20 rounded-xl p-2">
             <div className="space-y-1">
               {devices.map((device) => (
-                <label 
+                <label
                   key={device.device_id}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
-                    selectedDevices.includes(device.device_id) ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${selectedDevices.includes(device.device_id) ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
+                    }`}
                 >
                   <input
                     type="checkbox"
@@ -277,7 +275,7 @@ const DeviceSelectionModal = ({ isOpen, onClose, onSelectDevice, devices }) => {
               ))}
             </div>
           </div>
-          
+
           {selectedDevices.length > 0 && (
             <p className="text-sky-400 text-sm mt-2">
               {selectedDevices.length} device{selectedDevices.length > 1 ? 's' : ''} selected
@@ -424,48 +422,46 @@ const DateSearchModal = ({ isOpen, onClose, onSearch, devices }) => {
           </LocalizationProvider>
         </ThemeProvider>
 
-{devices.length > 0 && (
-  <div className="mt-6">
-    <label className="block text-white mb-2">Filter by Device:</label>
-    <div className="max-h-60 overflow-y-auto bg-white/10 border border-white/20 rounded-xl p-2">
-      <div className="space-y-1">
-        <label
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
-            selectedDevice === 'all' ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
-          }`}
-        >
-          <input
-            type="radio"
-            name="device-filter"
-            value="all"
-            checked={selectedDevice === 'all'}
-            onChange={(e) => setSelectedDevice(e.target.value)}
-            className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-500"
-          />
-          <span className="text-white font-mono text-sm">All Devices</span>
-        </label>
-        {devices.map((device) => (
-          <label
-            key={device.device_id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${
-              selectedDevice === device.device_id ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
-            }`}
-          >
-            <input
-              type="radio"
-              name="device-filter"
-              value={device.device_id}
-              checked={selectedDevice === device.device_id}
-              onChange={(e) => setSelectedDevice(e.target.value)}
-              className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-500"
-            />
-            <span className="text-white font-mono text-sm">{device.device_id}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  </div>
-)}
+        {devices.length > 0 && (
+          <div className="mt-6">
+            <label className="block text-white mb-2">Filter by Device:</label>
+            <div className="max-h-60 overflow-y-auto bg-white/10 border border-white/20 rounded-xl p-2">
+              <div className="space-y-1">
+                <label
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${selectedDevice === 'all' ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
+                    }`}
+                >
+                  <input
+                    type="radio"
+                    name="device-filter"
+                    value="all"
+                    checked={selectedDevice === 'all'}
+                    onChange={(e) => setSelectedDevice(e.target.value)}
+                    className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-500"
+                  />
+                  <span className="text-white font-mono text-sm">All Devices</span>
+                </label>
+                {devices.map((device) => (
+                  <label
+                    key={device.device_id}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all hover:bg-white/20 ${selectedDevice === device.device_id ? 'bg-sky-600/50 border-2 border-sky-400' : 'bg-white/5'
+                      }`}
+                  >
+                    <input
+                      type="radio"
+                      name="device-filter"
+                      value={device.device_id}
+                      checked={selectedDevice === device.device_id}
+                      onChange={(e) => setSelectedDevice(e.target.value)}
+                      className="w-4 h-4 text-sky-600 focus:ring-2 focus:ring-sky-500"
+                    />
+                    <span className="text-white font-mono text-sm">{device.device_id}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mt-4 text-center text-red-400 bg-red-900/50 p-3 rounded-xl">
@@ -774,18 +770,17 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
                 <div
                   key={device.device_id}
                   onClick={() => isClickable ? onDeviceClick(device.device_id) : null}
-                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                    isClickable ? 'cursor-pointer hover:scale-105 hover:shadow-lg' : ''
-                  }`}
+                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isClickable ? 'cursor-pointer hover:scale-105 hover:shadow-lg' : ''
+                    }`}
                   style={{
-                    background: isClickable 
-                      ? `linear-gradient(135deg, ${deviceColor}15, ${deviceColor}25)` 
+                    background: isClickable
+                      ? `linear-gradient(135deg, ${deviceColor}15, ${deviceColor}25)`
                       : 'rgba(255, 255, 255, 0.05)',
-                    border: isClickable 
-                      ? `2px solid ${deviceColor}60` 
+                    border: isClickable
+                      ? `2px solid ${deviceColor}60`
                       : '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: isClickable 
-                      ? `0 0 15px ${deviceColor}40` 
+                    boxShadow: isClickable
+                      ? `0 0 15px ${deviceColor}40`
                       : 'none'
                   }}
                   title={isClickable ? 'Click to zoom to device path' : ''}
@@ -807,20 +802,19 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
 
                   <div className="flex items-center gap-2">
                     {isActive && !isLiveMode && (
-                      <div 
+                      <div
                         className="w-6 h-1 rounded-full"
-                        style={{ 
+                        style={{
                           backgroundColor: deviceColor,
                           boxShadow: `0 0 8px ${deviceColor}`
                         }}
                       />
                     )}
                     <span
-                      className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        isActive
+                      className={`text-xs px-2 py-1 rounded-full font-medium ${isActive
                           ? 'bg-green-500/20 text-green-400'
                           : 'bg-red-500/20 text-red-400'
-                      }`}
+                        }`}
                     >
                       {isActive ? 'Active' : 'Inactive'}
                     </span>
@@ -889,7 +883,7 @@ const DeviceZoomHandler = ({ deviceId, paths }) => {
   useEffect(() => {
     if (deviceId && paths[deviceId] && paths[deviceId].length > 0) {
       const devicePath = paths[deviceId];
-      
+
       // Pequeño delay para asegurar que el mapa esté listo
       setTimeout(() => {
         if (devicePath.length === 1) {
@@ -902,8 +896,8 @@ const DeviceZoomHandler = ({ deviceId, paths }) => {
           // Si hay múltiples puntos, ajustar el mapa para mostrar todo el recorrido
           try {
             const bounds = L.latLngBounds(devicePath);
-            map.fitBounds(bounds, { 
-              padding: [50, 50], 
+            map.fitBounds(bounds, {
+              padding: [50, 50],
               maxZoom: 16,
               animate: true,
               duration: 1.5
@@ -935,7 +929,7 @@ const LocationMap = ({
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [selectedJourneyIndex, setSelectedJourneyIndex] = useState(null);
-    // Desactivar MapUpdater cuando se selecciona un dispositivo
+  // Desactivar MapUpdater cuando se selecciona un dispositivo
   useEffect(() => {
     if (selectedDeviceForZoom) {
       setHasUserInteracted(true);
@@ -983,16 +977,16 @@ const LocationMap = ({
   };
   const JourneyZoomController = ({ journeyIndex }) => {
     const map = useMap();
-    
+
     useEffect(() => {
       if (journeyIndex !== null && journeys[journeyIndex]) {
         const journey = journeys[journeyIndex];
         const journeyBounds = journey.points.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]);
-        
+
         if (journeyBounds.length > 0) {
           try {
-            map.fitBounds(journeyBounds, { 
-              padding: [50, 50], 
+            map.fitBounds(journeyBounds, {
+              padding: [50, 50],
               maxZoom: 16,
               duration: 1
             });
@@ -1012,7 +1006,7 @@ const LocationMap = ({
         <div className="mb-2 p-3 bg-sky-500/20 border border-sky-500/50 rounded-xl">
           <p className="text-white text-sm text-center">
             📍 <strong>Click on the map to set the first corner.</strong>
-            <br/>
+            <br />
             Move the mouse and <strong>click a second time</strong> to complete the area.
             <span className="text-xs text-white/70">Press ESC or right-click to cancel.</span>
           </p>
@@ -1051,7 +1045,7 @@ const LocationMap = ({
           if (!location.device_id || location.device_id === 'Device' || location.device_id === 'unknown') {
             return null;
           }
-          
+
           const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
           const activeDeviceIds = locations.map(loc => loc.device_id);
           const deviceColor = getColorForDevice(location.device_id, activeDeviceIds);
@@ -1121,68 +1115,67 @@ const LocationMap = ({
         </div>
       )}
 
-{journeys.length > 0 && (
-  <div className="mt-4 p-4 bg-white/10 rounded-xl max-h-64 overflow-y-auto">
-    <div className="flex justify-between items-center mb-3">
-      <h3 className="text-white font-bold">
-        Area Search for: {Array.isArray(travelRecordDevice) ? travelRecordDevice.join(', ') : travelRecordDevice}
-      </h3>
-      <button
-        onClick={onSaveGeofence}
-        className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg transition-all font-medium text-sm flex items-center gap-2"
-        title="Save this geofence"
-      >
-        💾 Save Geofence
-      </button>
-    </div>
-    <div className="space-y-2">
-      {journeys.map((journey, index) => {
-        const startDate = new Date(journey.start_time);
-        const endDate = new Date(journey.end_time);
-        const isSelected = selectedJourneyIndex === index;
-        
-        return (
-          <button
-            key={`legend-${index}`}
-            onClick={() => setSelectedJourneyIndex(index)}
-            className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer hover:bg-white/20 ${
-              isSelected ? 'bg-sky-600/30 border-2 border-sky-400' : 'bg-white/5'
-            }`}
-          >
-            <div
-              className="w-4 h-4 rounded-full flex-shrink-0"
-              style={{ backgroundColor: JOURNEY_COLORS[index % JOURNEY_COLORS.length] }}
-            />
-            <div className="text-white text-xs text-left flex-1">
-              <div className="font-semibold">
-                Journey {index + 1}
-                {journey.device_id && <span className="text-sky-400 ml-2">({journey.device_id})</span>}
-              </div>
-              <div className="text-white/70">
-                {startDate.toLocaleString('es-ES', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })} - {endDate.toLocaleString('es-ES', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </div>
-            </div>
-            {isSelected && (
-              <div className="text-sky-400 text-lg">
-                📍
-              </div>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  </div>
-)}
+      {journeys.length > 0 && (
+        <div className="mt-4 p-4 bg-white/10 rounded-xl max-h-64 overflow-y-auto">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-white font-bold">
+              Area Search for: {Array.isArray(travelRecordDevice) ? travelRecordDevice.join(', ') : travelRecordDevice}
+            </h3>
+            <button
+              onClick={onSaveGeofence}
+              className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg transition-all font-medium text-sm flex items-center gap-2"
+              title="Save this geofence"
+            >
+              💾 Save Geofence
+            </button>
+          </div>
+          <div className="space-y-2">
+            {journeys.map((journey, index) => {
+              const startDate = new Date(journey.start_time);
+              const endDate = new Date(journey.end_time);
+              const isSelected = selectedJourneyIndex === index;
+
+              return (
+                <button
+                  key={`legend-${index}`}
+                  onClick={() => setSelectedJourneyIndex(index)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer hover:bg-white/20 ${isSelected ? 'bg-sky-600/30 border-2 border-sky-400' : 'bg-white/5'
+                    }`}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: JOURNEY_COLORS[index % JOURNEY_COLORS.length] }}
+                  />
+                  <div className="text-white text-xs text-left flex-1">
+                    <div className="font-semibold">
+                      Journey {index + 1}
+                      {journey.device_id && <span className="text-sky-400 ml-2">({journey.device_id})</span>}
+                    </div>
+                    <div className="text-white/70">
+                      {startDate.toLocaleString('es-ES', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })} - {endDate.toLocaleString('es-ES', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <div className="text-sky-400 text-lg">
+                      📍
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1196,7 +1189,7 @@ function App() {
   const [activeDeviceIds, setActiveDeviceIds] = useState([]);
   const [isDateSearchModalOpen, setIsDateSearchModalOpen] = useState(false);
   const [isLiveMode, setIsLiveMode] = useState(true);
-  
+
 
   const [travelRecordMode, setTravelRecordMode] = useState(false);
   const [isDeviceSelectionModalOpen, setIsDeviceSelectionModalOpen] = useState(false);
@@ -1215,10 +1208,10 @@ function App() {
       const response = await fetch(`${config.API_BASE_URL}/api/devices`);
       if (response.ok) {
         const data = await response.json();
-        const devicesArray = Array.isArray(data) 
+        const devicesArray = Array.isArray(data)
           ? data
-              .map(d => typeof d === 'string' ? { device_id: d } : d)
-              .filter(d => d.device_id && d.device_id !== 'Device' && d.device_id !== 'unknown' && d.device_id.trim() !== '')
+            .map(d => typeof d === 'string' ? { device_id: d } : d)
+            .filter(d => d.device_id && d.device_id !== 'Device' && d.device_id !== 'unknown' && d.device_id.trim() !== '')
           : [];
         setAllDevices(devicesArray);
       }
@@ -1256,12 +1249,12 @@ function App() {
         }
       } else {
         const data = await response.json();
-        
+
         // Filtrar ubicaciones sin device_id válido
-        const validData = data.filter(loc => 
-          loc.device_id && 
-          loc.device_id !== 'Device' && 
-          loc.device_id !== 'unknown' && 
+        const validData = data.filter(loc =>
+          loc.device_id &&
+          loc.device_id !== 'Device' &&
+          loc.device_id !== 'unknown' &&
           loc.device_id.trim() !== ''
         );
 
@@ -1318,12 +1311,12 @@ function App() {
       }
 
       const historicalData = await response.json();
-      
+
       // Filtrar datos sin device_id válido
-      const validHistoricalData = historicalData.filter(point => 
-        point.device_id && 
-        point.device_id !== 'Device' && 
-        point.device_id !== 'unknown' && 
+      const validHistoricalData = historicalData.filter(point =>
+        point.device_id &&
+        point.device_id !== 'Device' &&
+        point.device_id !== 'unknown' &&
         point.device_id.trim() !== ''
       );
 
@@ -1371,52 +1364,52 @@ function App() {
   };
 
   const handleDeviceSelected = (deviceIds) => {
-  setSelectedDeviceForTravel(deviceIds);
-  setTravelRecordMode(true);
-  setIsLiveMode(false);
-  setJourneys([]);
-  setLocationsData([]);
-  setPaths({});
-  setIsDrawingAllowed(true);
-};
+    setSelectedDeviceForTravel(deviceIds);
+    setTravelRecordMode(true);
+    setIsLiveMode(false);
+    setJourneys([]);
+    setLocationsData([]);
+    setPaths({});
+    setIsDrawingAllowed(true);
+  };
 
-const handleAreaDrawn = async (area) => {
-  if (!selectedDeviceForTravel || selectedDeviceForTravel.length === 0) return;
-  setCurrentArea(area);
-  setIsDrawingAllowed(false);
-  setLoading(true);
-  try {
-    const allJourneys = [];
+  const handleAreaDrawn = async (area) => {
+    if (!selectedDeviceForTravel || selectedDeviceForTravel.length === 0) return;
+    setCurrentArea(area);
+    setIsDrawingAllowed(false);
+    setLoading(true);
+    try {
+      const allJourneys = [];
 
-    for (const deviceId of selectedDeviceForTravel) {
-      const url = `${config.API_BASE_URL}/api/location/area-records?minLat=${area.minLat}&maxLat=${area.maxLat}&minLng=${area.minLng}&maxLng=${area.maxLng}&device_id=${deviceId}`;
+      for (const deviceId of selectedDeviceForTravel) {
+        const url = `${config.API_BASE_URL}/api/location/area-records?minLat=${area.minLat}&maxLat=${area.maxLat}&minLng=${area.minLng}&maxLng=${area.maxLng}&device_id=${deviceId}`;
 
-      const response = await fetch(url);
+        const response = await fetch(url);
 
-      if (response.ok) {
-        const data = await response.json();
-        const journeysWithDevice = data.map(journey => ({
-          ...journey,
-          device_id: deviceId
-        }));
-        allJourneys.push(...journeysWithDevice);
+        if (response.ok) {
+          const data = await response.json();
+          const journeysWithDevice = data.map(journey => ({
+            ...journey,
+            device_id: deviceId
+          }));
+          allJourneys.push(...journeysWithDevice);
+        }
       }
-    }
 
-    if (allJourneys.length > 0) {
-      setJourneys(allJourneys);
-      setError(null);
-    } else {
-      setError('No se encontraron recorridos en esta área para los dispositivos seleccionados.');
-      setJourneys([]);
+      if (allJourneys.length > 0) {
+        setJourneys(allJourneys);
+        setError(null);
+      } else {
+        setError('No se encontraron recorridos en esta área para los dispositivos seleccionados.');
+        setJourneys([]);
+      }
+    } catch (err) {
+      setError('Error al buscar recorridos en el área.');
+      console.error('Error fetching area records:', err);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    setError('Error al buscar recorridos en el área.');
-    console.error('Error fetching area records:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   const handleDeviceClick = (deviceId) => {
     if (!isLiveMode) {
       setSelectedDeviceForZoom(deviceId);
@@ -1426,85 +1419,85 @@ const handleAreaDrawn = async (area) => {
   };
 
 
-const handleExitTravelRecord = () => {
-  setTravelRecordMode(false);
-  setSelectedDeviceForTravel([]);
-  setJourneys([]);
-  setCurrentArea(null);
-  setIsLiveMode(true);
-  setLoading(true);
-  setIsDrawingAllowed(true);
-};
-const handleSaveGeofence = async (geofenceData) => {
-  try {
-    // Preparar el payload de la geocerca (sin journeys)
-    const geofencePayload = {
-      name: geofenceData.name,
-      description: geofenceData.description || '',
-      min_lat: geofenceData.area.minLat,
-      max_lat: geofenceData.area.maxLat,
-      min_lng: geofenceData.area.minLng,
-      max_lng: geofenceData.area.maxLng,
-      device_ids: geofenceData.devices,
-      created_by: 'julicarolinav'
-    };
+  const handleExitTravelRecord = () => {
+    setTravelRecordMode(false);
+    setSelectedDeviceForTravel([]);
+    setJourneys([]);
+    setCurrentArea(null);
+    setIsLiveMode(true);
+    setLoading(true);
+    setIsDrawingAllowed(true);
+  };
+  const handleSaveGeofence = async (geofenceData) => {
+    try {
+      // Preparar el payload de la geocerca (sin journeys)
+      const geofencePayload = {
+        name: geofenceData.name,
+        description: geofenceData.description || '',
+        min_lat: geofenceData.area.minLat,
+        max_lat: geofenceData.area.maxLat,
+        min_lng: geofenceData.area.minLng,
+        max_lng: geofenceData.area.maxLng,
+        device_ids: geofenceData.devices,
+        created_by: 'julicarolinav'
+      };
 
-    // Preparar los journeys en el formato correcto
-    const journeysPayload = geofenceData.journeys && geofenceData.journeys.length > 0
-      ? geofenceData.journeys.map(journey => ({
+      // Preparar los journeys en el formato correcto
+      const journeysPayload = geofenceData.journeys && geofenceData.journeys.length > 0
+        ? geofenceData.journeys.map(journey => ({
           device_id: journey.device_id,
           start_time: journey.start_time,
           end_time: journey.end_time,
           points: journey.points
         }))
-      : null;
+        : null;
 
-    // Crear el payload completo
-    const payload = {
-      geofence: geofencePayload,
-      journeys: journeysPayload
-    };
+      // Crear el payload completo
+      const payload = {
+        geofence: geofencePayload,
+        journeys: journeysPayload
+      };
 
-    console.log('Sending payload:', JSON.stringify(payload, null, 2)); // Para debug
+      console.log('Sending payload:', JSON.stringify(payload, null, 2)); // Para debug
 
-    const response = await fetch(`${config.API_BASE_URL}/api/geofences`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
+      const response = await fetch(`${config.API_BASE_URL}/api/geofences`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Server error:', errorData);
-      throw new Error(`Failed to save geofence: ${JSON.stringify(errorData)}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Server error:', errorData);
+        throw new Error(`Failed to save geofence: ${JSON.stringify(errorData)}`);
+      }
+
+      const result = await response.json();
+      console.log('Geofence saved successfully:', result);
+      alert('✅ Geofence saved successfully!');
+    } catch (err) {
+      console.error('Error saving geofence:', err);
+      throw err;
     }
-
-    const result = await response.json();
-    console.log('Geofence saved successfully:', result);
-    alert('✅ Geofence saved successfully!');
-  } catch (err) {
-    console.error('Error saving geofence:', err);
-    throw err;
-  }
-};
-// Cargar la geocerca en el mapas
-const handleLoadGeofence = (geofenceData) => {
-  // Cargar la geocerca en el mapa
-  setSelectedDeviceForTravel(geofenceData.device_ids);
-  setTravelRecordMode(true);
-  setIsLiveMode(false);
-  setJourneys(geofenceData.journeys);
-  setCurrentArea({
-    minLat: geofenceData.min_lat,
-    maxLat: geofenceData.max_lat,
-    minLng: geofenceData.min_lng,
-    maxLng: geofenceData.max_lng
-  });
-  setLocationsData([]);
-  setPaths({});
-};
+  };
+  // Cargar la geocerca en el mapas
+  const handleLoadGeofence = (geofenceData) => {
+    // Cargar la geocerca en el mapa
+    setSelectedDeviceForTravel(geofenceData.device_ids);
+    setTravelRecordMode(true);
+    setIsLiveMode(false);
+    setJourneys(geofenceData.journeys);
+    setCurrentArea({
+      minLat: geofenceData.min_lat,
+      maxLat: geofenceData.max_lat,
+      minLng: geofenceData.min_lng,
+      maxLng: geofenceData.max_lng
+    });
+    setLocationsData([]);
+    setPaths({});
+  };
 
 
   useEffect(() => {
@@ -1611,7 +1604,7 @@ const handleLoadGeofence = (geofenceData) => {
               />
               {isLiveMode && activeDeviceIds.length > 0 && !showVideoStream && (
                 <div className="mt-4">
-                  <button 
+                  <button
                     onClick={() => {
                       // Usar el primer dispositivo activo por defecto
                       setSelectedDeviceForVideo(activeDeviceIds[0]);
@@ -1634,19 +1627,18 @@ const handleLoadGeofence = (geofenceData) => {
                   <div className="glassmorphism-strong rounded-4xl p-6">
                     <div className="flex justify-between items-center mb-4">
                       <h2 className="text-2xl font-bold text-white">📹 Live Video Stream</h2>
-                      <button 
+                      <button
                         onClick={() => setShowVideoStream(false)}
                         className="text-white/60 hover:text-white p-2 text-3xl"
                       >
                         ✕
                       </button>
                     </div>
-                    
+
                     <VideoStream
-                    deviceId={selectedDeviceForVideo}
-                    serverUrl={import.meta.env.VITE_WEBRTC_URL || 'ws://panteratracker.me:8081'}
-                    />
-                    
+                      deviceId={selectedDeviceForVideo}
+                      serverUrl={import.meta.env.VITE_WEBRTC_URL || 'https://panteratracker.tech'} />
+
                     <div className="mt-4 flex gap-3">
                       {/* Selector de dispositivo si hay múltiples ooo */}
                       {activeDeviceIds.length > 1 && (
@@ -1662,8 +1654,8 @@ const handleLoadGeofence = (geofenceData) => {
                           ))}
                         </select>
                       )}
-                      
-                      <button 
+
+                      <button
                         onClick={() => setShowVideoStream(false)}
                         className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all font-medium"
                       >

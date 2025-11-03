@@ -59,12 +59,16 @@ async def startup_event():
         await db.init_connection_pool()
         await db.create_table()
         udp_transport, udp_protocol = await start_udp_server(db)  # ✅ Pasa db aquí
+        
+        # 🔧 CAMBIO: Puerto correcto 8081
+        webrtc_port = int(os.getenv('WEBRTC_PORT', 8081))
         webrtc_runner = await start_webrtc_server(
             host='0.0.0.0',
-            port=int(os.getenv('WEBRTC_PORT', 8080))
+            port=webrtc_port
         )
+        
         print(f"HTTP API escuchando en puerto {os.getenv('HTTP_PORT', 3001)}")
-        print(f"WebRTC Server escuchando en puerto 8081")
+        print(f"WebRTC Server escuchando en puerto {webrtc_port}")  # 🔧 CAMBIO: Mostrar puerto real
     except Exception as e:
         print(f"Error iniciando servidor: {e}")
         raise
@@ -318,5 +322,5 @@ async def health_check():
 # Iniciar servidor (debe estar al FINAL)
 if __name__ == "__main__":
     import uvicorn
-    port =8081
+    port = int(os.getenv('HTTP_PORT', 3001))
     uvicorn.run(app, host="0.0.0.0", port=port)

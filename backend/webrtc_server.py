@@ -1,6 +1,8 @@
 import asyncio
 import json
 import logging
+import os
+import ssl
 from typing import Dict, Set
 from aiohttp import web
 import socketio
@@ -70,7 +72,8 @@ async def register_broadcaster(sid, data):
     })
     
     logger.info(f"✅ Broadcaster {device_id} listo para transmitir")
-    # Alias para compatibilidad con guiones
+    
+# Alias para compatibilidad con guiones
 sio.on('register-broadcaster', register_broadcaster)
 
 # ⭐ NUEVO: NAVEGADOR SE REGISTRA COMO VIEWER ⭐
@@ -90,6 +93,9 @@ async def register_viewer(sid, data):
     await sio.emit('available-broadcasters', available_devices, room=sid)
     
     logger.info(f"📡 Enviados {len(available_devices)} dispositivos disponibles a {viewer_id}")
+
+# Alias para compatibilidad con guiones
+sio.on('register-viewer', register_viewer)
 
 # ⭐ NUEVO: NAVEGADOR SOLICITA STREAM DE UN DISPOSITIVO ⭐
 @sio.event
@@ -119,6 +125,9 @@ async def request_stream(sid, data):
             'message': f'Device {device_id} not available'
         }, room=sid)
         logger.warning(f"⚠️ Device {device_id} no disponible")
+
+# Alias para compatibilidad con guiones
+sio.on('request-stream', request_stream)
 
 # ⭐ NUEVO: RETRANSMITIR OFFER DE ANDROID A NAVEGADOR ⭐
 @sio.event
@@ -162,6 +171,9 @@ async def ice_candidate(sid, data):
         'candidate': candidate
     }, room=target)
 
+# Alias para compatibilidad con guiones
+sio.on('ice-candidate', ice_candidate)
+
 # ⭐ ENDPOINTS HTTP ⭐
 async def health_check(request):
     """Health check del servidor de video"""
@@ -185,8 +197,9 @@ async def get_active_devices(request):
         content_type="application/json"
     )
 
+# 🔧 FUNCIÓN ACTUALIZADA CON SOPORTE SSL/WSS
 async def start_webrtc_server(host='0.0.0.0', port=8081):
-    """Iniciar servidor WebRTC"""
+    """Iniciar servidor WebRTC con soporte SSL/TLS opcional"""
     
     # Registrar rutas HTTP
     app.router.add_get('/health', health_check)
@@ -195,14 +208,43 @@ async def start_webrtc_server(host='0.0.0.0', port=8081):
     logger.info(f"🎥 Iniciando servidor WebRTC en {host}:{port}")
     logger.info(f"📡 Servidores configurados para retransmisión: {len(OTHER_SERVERS)}")
     
+    # 🔒 Configurar SSL si hay certificados disponibles
+    ssl_context = None
+    ssl_cert = os.getenv('SSL_CERT')
+    ssl_key = os.getenv('SSL_KEY')
+    
+    if ssl_cert and ssl_key:
+        try:
+            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(ssl_cert, ssl_key)
+            logger.info(f"🔒 SSL habilitado - Certificado: {ssl_cert}")
+        except Exception as e:
+            logger.error(f"❌ Error cargando certificados SSL: {e}")
+            logger.warning(f"⚠️ Continuando sin SSL...")
+            ssl_context = None
+    else:
+        logger.info(f"ℹ️ SSL no configurado - usando conexión no segura")
+        logger.info(f"ℹ️ Para habilitar SSL, configura SSL_CERT y SSL_KEY en variables de entorno")
+    
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, host, port)
+    
+    # Crear sitio con o sin SSL
+    site = web.TCPSite(runner, host, port, ssl_context=ssl_context)
     await site.start()
     
-    logger.info(f"✅ Servidor WebRTC iniciado: ws://{host}:{port}")
-    logger.info(f"📊 Health check: http://{host}:{port}/health")
-    logger.info(f"📱 API devices: http://{host}:{port}/api/devices")
+    # Mostrar URL correcta según SSL
+    protocol = 'wss' if ssl_context else 'ws'
+    http_protocol = 'https' if ssl_context else 'http'
+    
+    logger.info(f"✅ Servidor WebRTC iniciado: {protocol}://{host}:{port}")
+    logger.info(f"📊 Health check: {http_protocol}://{host}:{port}/health")
+    logger.info(f"📱 API devices: {http_protocol}://{host}:{port}/api/devices")
+    
+    if ssl_context:
+        logger.info(f"🔒 Conexiones seguras WSS habilitadas")
+    else:
+        logger.warning(f"⚠️ Conexiones no seguras WS - Considera habilitar SSL para producción")
     
     return runner
 

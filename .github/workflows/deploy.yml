@@ -57,7 +57,7 @@ jobs:
             pip install -r requirements.txt
 
             # Reiniciar el servicio con PM2
-            pm2 restart location-backend-py || pm2 start run.py --name location-backend-py --interpreter python3
+            sudo pm2 restart location-backend-py || sudo pm2 start run.py --name location-backend-py --interpreter python3
 
             # 3. Configurar y construir el Frontend
             echo '🖥️  Configurando Frontend...'
