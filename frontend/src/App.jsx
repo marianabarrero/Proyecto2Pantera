@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L, { Icon } from 'leaflet';
 import { ThreeDot } from 'react-loading-indicators';
 import VideoStream from './Components/VideoStream';
+import MultiVideoGrid from './Components/MultiVideoGrid';
 
 
 // --- MUI Date Picker Imports ---
@@ -1605,68 +1606,52 @@ function App() {
               {isLiveMode && activeDeviceIds.length > 0 && !showVideoStream && (
                 <div className="mt-4">
                   <button
-                    onClick={() => {
-                      // Usar el primer dispositivo activo por defecto
-                      setSelectedDeviceForVideo(activeDeviceIds[0]);
-                      setShowVideoStream(true);
-                    }}
+                    onClick={() => setShowVideoStream(true)}
                     className="w-full button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 shadow-lg"
                   >
-                    📹 Ver Video en Vivo
+                    📹 Ver Todas las Transmisiones en Vivo
                   </button>
                 </div>
               )}
 
             </div>
 
-            {/* ⭐ MODAL DE VIDEO - AGREGAR ESTO FUERA DE LA COLUMNA ⭐ */}
-            {showVideoStream && selectedDeviceForVideo && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowVideoStream(false)} />
-                <div className="relative z-10 w-full max-w-4xl mx-4">
-                  <div className="glassmorphism-strong rounded-4xl p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-2xl font-bold text-white">📹 Live Video Stream</h2>
-                      <button
-                        onClick={() => setShowVideoStream(false)}
-                        className="text-white/60 hover:text-white p-2 text-3xl"
-                      >
-                        ✕
-                      </button>
-                    </div>
+           
+            {/* ⭐ MODAL DE VIDEO - MÚLTIPLES DISPOSITIVOS ⭐ */}
+{showVideoStream && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={() => setShowVideoStream(false)} />
+    <div className="relative z-10 w-full max-w-7xl h-[90vh]">
+      <div className="glassmorphism-strong rounded-4xl p-6 h-full flex flex-col">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-white">📹 Transmisiones en Vivo</h2>
+          <button
+            onClick={() => setShowVideoStream(false)}
+            className="text-white/60 hover:text-white p-2 text-3xl transition-colors"
+          >
+            ✕
+          </button>
+        </div>
 
-                    <VideoStream
-                      deviceId={selectedDeviceForVideo}
-                      serverUrl={import.meta.env.VITE_WEBRTC_URL || 'https://panteratracker.tech'} />
+        <div className="flex-1 overflow-auto">
+          <MultiVideoGrid
+            serverUrl={import.meta.env.VITE_WEBRTC_URL || 'https://panteratracker.tech'}
+          />
+        </div>
 
-                    <div className="mt-4 flex gap-3">
-                      {/* Selector de dispositivo si hay múltiples ooo */}
-                      {activeDeviceIds.length > 1 && (
-                        <select
-                          value={selectedDeviceForVideo}
-                          onChange={(e) => setSelectedDeviceForVideo(e.target.value)}
-                          className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:border-sky-400"
-                        >
-                          {activeDeviceIds.map(deviceId => (
-                            <option key={deviceId} value={deviceId} className="bg-gray-800">
-                              {deviceId}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-
-                      <button
-                        onClick={() => setShowVideoStream(false)}
-                        className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all font-medium"
-                      >
-                        Cerrar Video
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* ⭐ FIN DEL MODAL DE VIDEO ⭐ */}
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={() => setShowVideoStream(false)}
+            className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all font-medium shadow-lg"
+          >
+            Cerrar Todas las Transmisiones
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+{/* ⭐ FIN DEL MODAL DE VIDEO ⭐ */}
           </>
         )}
       </main>
