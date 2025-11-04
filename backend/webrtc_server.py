@@ -208,6 +208,29 @@ async def ice_candidate(sid, data):
 # Alias para compatibilidad con guiones
 sio.on('ice-candidate', ice_candidate)
 
+# ⭐ NUEVO: RECIBIR DETECCIONES DE PERSONAS ⭐
+@sio.event
+async def person_detection(sid, data):
+    """Recibir conteo de personas detectadas desde viewer/raspberry"""
+    device_id = data.get('deviceId')
+    person_count = data.get('personCount', 0)
+    timestamp = data.get('timestamp')
+    
+    logger.info(f"👤 Detección recibida de {sid}: {person_count} persona(s) en {device_id}")
+    
+    # Broadcast a TODOS los clientes conectados (web viewers)
+    await sio.emit('detection-update', {
+        'deviceId': device_id,
+        'personCount': person_count,
+        'timestamp': timestamp,
+        'source': sid
+    })
+    
+    logger.info(f"📡 Detección enviada a todos los clientes web")
+
+# Alias para compatibilidad
+sio.on('person-detection', person_detection)
+
 # ⭐ ENDPOINTS HTTP ⭐
 async def health_check(request):
     """Health check del servidor de video"""
