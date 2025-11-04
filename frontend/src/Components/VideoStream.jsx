@@ -8,6 +8,7 @@ function VideoStream({ deviceId, serverUrl }) {
     const socketRef = useRef(null);
     const broadcasterSocketIdRef = useRef(null);
     const [status, setStatus] = useState('Conectando...');
+    const [personCount, setPersonCount] = useState(0); // ⭐ NUEVO
 
     useEffect(() => {
         if (!deviceId || !serverUrl) return;
@@ -179,6 +180,16 @@ function VideoStream({ deviceId, serverUrl }) {
             setStatus(`Error: ${err.message}`);
         });
 
+
+        // ⭐ NUEVO: Listener para recibir actualizaciones de detección ⭐
+        socket.on('detection-update', (data) => {
+            console.log('👤 Detección recibida:', data);
+            if (data.deviceId === deviceId) {
+                setPersonCount(data.personCount);
+                console.log(`✅ Actualizado contador: ${data.personCount} persona(s)`);
+            }
+        });
+
         // 7. Cleanup
         return () => {
             console.log('🧹 Limpiando VideoStream...');
@@ -237,6 +248,27 @@ function VideoStream({ deviceId, serverUrl }) {
                 fontSize: '12px'
             }}>
                 📱 {deviceId}
+            </div>
+
+
+            {/* ⭐ NUEVO: Contador de personas detectadas ⭐ */}
+            <div style={{
+                position: 'absolute',
+                bottom: 10,
+                right: 10,
+                backgroundColor: personCount > 0 ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.7)',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '12px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+            }}>
+                <span style={{ fontSize: '24px' }}>👤</span>
+                <span>{personCount} {personCount === 1 ? 'Persona' : 'Personas'}</span>
             </div>
         </div>
     );
