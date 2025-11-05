@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker, Rectangle, useMapEvents, Polygon } from 'react-leaflet';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker, Rectangle, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L, { Icon } from 'leaflet';
@@ -74,37 +75,32 @@ const isDeviceActive = (timestamp) => {
   return (now - deviceTime) <= config.DEVICE_TIMEOUT;
 };
 
-// --- Componente para dibujar rectángulos CON BLOQUEO DEL MAPA ---
-const RectangleDrawer = ({ onRectangleComplete }) => {
-  const [startPoint, setStartPoint] = useState(null);
+
+// --- Componente para dibujar POLÍGONOS CON BLOQUEO DEL MAPA ---
+const PolygonDrawer = ({ onRectangleComplete }) => {
+  const [points, setPoints] = useState([]);
   const [currentPoint, setCurrentPoint] = useState(null);
   const map = useMap();
 
   useEffect(() => {
-    // Cuando se inicia el dibujo, deshabilitar el arrastre del mapa
-    if (startPoint) {
+    // Cuando hay puntos, deshabilitar el arrastre del mapa
+    if (points.length > 0) {
       map.dragging.disable();
       map.doubleClickZoom.disable();
       map.scrollWheelZoom.disable();
       map.boxZoom.disable();
       map.keyboard.disable();
-
-      // Cambiar cursor
       map.getContainer().style.cursor = 'crosshair';
     } else {
-      // Cuando termina el dibujo, habilitar de nuevo
       map.dragging.enable();
       map.doubleClickZoom.enable();
       map.scrollWheelZoom.enable();
       map.boxZoom.enable();
       map.keyboard.enable();
-
-      // Restaurar cursor
       map.getContainer().style.cursor = '';
     }
 
     return () => {
-      // Cleanup: asegurarse de que el mapa quede habilitado
       map.dragging.enable();
       map.doubleClickZoom.enable();
       map.scrollWheelZoom.enable();
@@ -112,62 +108,98 @@ const RectangleDrawer = ({ onRectangleComplete }) => {
       map.keyboard.enable();
       map.getContainer().style.cursor = '';
     };
-  }, [startPoint, map]);
+  }, [points, map]);
 
   useMapEvents({
     click(e) {
-      if (!startPoint) {
-        setStartPoint(e.latlng);
-      } else {
-        const bounds = L.latLngBounds(startPoint, e.latlng);
-        onRectangleComplete({
-          minLat: bounds.getSouth(),
-          maxLat: bounds.getNorth(),
-          minLng: bounds.getWest(),
-          maxLng: bounds.getEast()
-        });
-        setStartPoint(null);
-        setCurrentPoint(null);
-      }
+      // Agregar punto al polígono
+      setPoints([...points, e.latlng]);
     },
     mousemove(e) {
-      if (startPoint) {
+      if (points.length > 0) {
         setCurrentPoint(e.latlng);
       }
     },
-    // Permitir cancelar con clic derecho o tecla ESC
     contextmenu(e) {
+      // Clic derecho: finalizar polígono
       e.originalEvent.preventDefault();
-      setStartPoint(null);
-      setCurrentPoint(null);
+      if (points.length >= 3) {
+        // Convertir el polígono a un bounding box (rectángulo)
+        const lats = points.map(p => p.lat);
+        const lngs = points.map(p => p.lng);
+        
+        onRectangleComplete({
+          minLat: Math.min(...lats),
+          maxLat: Math.max(...lats),
+          minLng: Math.min(...lngs),
+          maxLng: Math.max(...lngs)
+        });
+        
+        setPoints([]);
+        setCurrentPoint(null);
+      }
     }
   });
 
   // Escuchar tecla ESC para cancelar
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape' && startPoint) {
-        setStartPoint(null);
+      if (e.key === 'Escape' && points.length > 0) {
+        setPoints([]);
         setCurrentPoint(null);
       }
     };
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [startPoint]);
+  }, [points]);
 
-  if (startPoint && currentPoint) {
-    const bounds = L.latLngBounds(startPoint, currentPoint);
+  // Dibujar el polígono temporal
+  if (points.length > 0) {
+    const displayPoints = currentPoint ? [...points, currentPoint] : points;
+    
     return (
-      <Rectangle
-        bounds={bounds}
-        pathOptions={{
-          color: '#3388ff',
-          weight: 2,
-          fillOpacity: 0.2,
-          dashArray: '5, 5'
-        }}
-      />
+      <>
+        {/* Polígono relleno */}
+        {points.length >= 3 && currentPoint && (
+          <Polygon
+            positions={displayPoints}
+            pathOptions={{
+              color: '#3388ff',
+              weight: 2,
+              fillOpacity: 0.2,
+              dashArray: '5, 5'
+            }}
+          />
+        )}
+        
+        {/* Líneas conectoras */}
+        {points.length > 0 && (
+          <Polyline
+            positions={displayPoints}
+            pathOptions={{
+              color: '#3388ff',
+              weight: 2,
+              dashArray: '5, 5'
+            }}
+          />
+        )}
+
+        {/* Marcadores para cada punto */}
+        {points.map((point, idx) => (
+          <CircleMarker
+            key={idx}
+            center={point}
+            radius={5}
+            pathOptions={{ 
+              color: '#3388ff', 
+              fillColor: '#3388ff', 
+              fillOpacity: 1,
+              weight: 2
+            }}
+          />
+        ))}
+      </>
     );
   }
 
@@ -1006,9 +1038,10 @@ const LocationMap = ({
       {travelRecordMode && (
         <div className="mb-2 p-3 bg-sky-500/20 border border-sky-500/50 rounded-xl">
           <p className="text-white text-sm text-center">
-            📍 <strong>Click on the map to set the first corner.</strong>
+            📍 <strong>Click on the map to add points to the polygon.</strong>
             <br />
-            Move the mouse and <strong>click a second time</strong> to complete the area.
+            <strong>Right click </strong> when you have at least 3 clicks to complete the area.
+            <br />
             <span className="text-xs text-white/70">Press ESC or right-click to cancel.</span>
           </p>
         </div>
@@ -1024,7 +1057,7 @@ const LocationMap = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
-        {travelRecordMode && isDrawingAllowed && <RectangleDrawer onRectangleComplete={onAreaDrawn} />}
+        {travelRecordMode && isDrawingAllowed && <PolygonDrawer onRectangleComplete={onAreaDrawn} />}
         {selectedDeviceForZoom && <DeviceZoomHandler deviceId={selectedDeviceForZoom} paths={paths} />}
 
 
