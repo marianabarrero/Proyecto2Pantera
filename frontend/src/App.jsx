@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker, Rectangle, useMapEvents, Polygon } from 'react-leaflet';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, CircleMarker, Rectangle, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L, { Icon } from 'leaflet';
 import { ThreeDot } from 'react-loading-indicators';
