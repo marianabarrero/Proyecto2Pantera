@@ -20,7 +20,7 @@ import './App.css';
 // --- Configuración Básicsa ---
 const config = {
   API_BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
-  APP_NAME: 'Pantera tracker',
+  APP_NAME: 'Pantera Tracker',
   APP_SUBTITLE: '',
   APP_VERSION: '2.0.0',
   POLLING_INTERVAL: import.meta.env.VITE_POLLING_INTERVAL || 5000,
