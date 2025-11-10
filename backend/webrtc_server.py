@@ -56,8 +56,8 @@ async def disconnect(sid):
             })
             logger.info(f"📱 Broadcaster {device_id} desconectado")
             break
-    
-    # Limpiar viewer si es uno
+
+    # Limpiar viewer si es unoo
     for viewer_id, viewer_data in list(active_viewers.items()):
         if viewer_data['socketId'] == sid:
             watching_device = viewer_data.get('watchingDevice')
