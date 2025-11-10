@@ -881,7 +881,7 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
       </button>
       <button
       onClick={onOpenLiveAreaSearch}
-      className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
+      className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
     >
   <span className='text-white group-hover:text-white/90 duration-300'>📍 Live Area Search</span>
 </button>
@@ -1058,7 +1058,7 @@ const LocationMap = ({
         </div>
       )}
       {liveAreaSearchMode && !liveAreaBounds && (
-  <div className="mb-2 p-3 bg-purple-500/20 border border-purple-500/50 rounded-xl">
+  <div className="mb-2 p-3 bg-blue-500/20 border border-blue-500/50 rounded-xl">
     <p className="text-white text-sm text-center">
       📍 <strong>Click on the map to draw the live monitoring area.</strong>
       <br />
@@ -1070,7 +1070,7 @@ const LocationMap = ({
 )}
 
 {liveAreaSearchMode && liveAreaBounds && devicesInLiveArea.length > 0 && (
-  <div className="mb-2 p-3 bg-purple-500/20 border border-purple-500/50 rounded-xl">
+  <div className="mb-2 p-3 bg-blue-500/20 border border-blue-500/50 rounded-xl">
     <p className="text-white text-sm text-center font-semibold">
       🎯 Monitoring {devicesInLiveArea.length} device(s) in the selected area
     </p>
@@ -1091,24 +1091,19 @@ const LocationMap = ({
         {liveAreaSearchMode && !liveAreaBounds && <PolygonDrawer onRectangleComplete={onLiveAreaDrawn} />}
         {selectedDeviceForZoom && <DeviceZoomHandler deviceId={selectedDeviceForZoom} paths={paths} />}
 
-        {/* Mostrar área dibujada en Live Area Search como polígono */}
-        {liveAreaSearchMode && liveAreaBounds && (
+        {/* Mostrar área dibujada en Live Area Search como polígono real */}
+        {liveAreaSearchMode && liveAreaBounds && liveAreaBounds.polygon && (
           <Polygon
-            positions={[
-              [liveAreaBounds.minLat, liveAreaBounds.minLng],
-              [liveAreaBounds.maxLat, liveAreaBounds.minLng],
-              [liveAreaBounds.maxLat, liveAreaBounds.maxLng],
-              [liveAreaBounds.minLat, liveAreaBounds.maxLng]
-            ]}
+            positions={liveAreaBounds.polygon}
             pathOptions={{
-              color: '#a855f7',
+              color: '#3b82f6',
               weight: 3,
-              fillColor: '#a855f7',
-              fillOpacity: 0.15,
+              fillColor: '#60a5fa',
+              fillOpacity: 0.2,
               dashArray: '10, 5'
             }}
-      />
-)}
+          />
+        )}
 
 
 
@@ -1189,8 +1184,8 @@ const LocationMap = ({
             📱 {location.device_id}
           </strong>
           <br />
-          <div className={`my-3 p-3 rounded-lg ${hasDetections ? 'bg-purple-100' : 'bg-gray-100'}`}>
-            <strong className={`text-3xl ${hasDetections ? 'text-purple-600' : 'text-gray-400'}`}>
+          <div className={`my-3 p-3 rounded-lg ${hasDetections ? 'bg-blue-100' : 'bg-gray-100'}`}>
+            <strong className={`text-3xl ${hasDetections ? 'text-blue-600' : 'text-gray-400'}`}>
               👤 {detectionCount}
             </strong>
             <p className="text-xs text-gray-600 mt-1">
@@ -1578,11 +1573,11 @@ const handleOpenLiveAreaSearch = () => {
   setLiveAreaBounds(null);
   setDevicesInLiveArea([]);
   setPersonDetections({});
-  console.log('🟣 Live Area Search Mode activado');
+  console.log('🔵 Live Area Search Mode activado');
 };
 
 const handleExitLiveAreaSearch = () => {
-  console.log('🟣 Saliendo de Live Area Search Mode...');
+  console.log('🔵 Saliendo de Live Area Search Mode...');
   
   // Desconectar WebSocket si existe
   if (socket) {
@@ -1599,10 +1594,22 @@ const handleExitLiveAreaSearch = () => {
   console.log('✅ Live Area Search Mode desactivado');
 };
 
-const handleLiveAreaDrawn = (area) => {
-  console.log('🟣 Área dibujada para Live Area Search:', area);
-  setLiveAreaBounds(area);
-  // La lógica de filtrado se hará en tiempo real con useEffect
+const handleLiveAreaDrawn = (polygon) => {
+  console.log('🔵 Área dibujada para Live Area Search:', polygon);
+  
+  // Calcular bounds del polígono para filtrado
+  const lats = polygon.map(p => p[0]);
+  const lngs = polygon.map(p => p[1]);
+  
+  const bounds = {
+    minLat: Math.min(...lats),
+    maxLat: Math.max(...lats),
+    minLng: Math.min(...lngs),
+    maxLng: Math.max(...lngs),
+    polygon: polygon  // Guardar el polígono completo
+  };
+  
+  setLiveAreaBounds(bounds);
 };
   const handleSaveGeofence = async (geofenceData) => {
     try {
@@ -1711,7 +1718,7 @@ useEffect(() => {
     });
     
     setDevicesInLiveArea(devicesInArea);
-    console.log(`🟣 Dispositivos en área: ${devicesInArea.length}`, devicesInArea.map(d => d.device_id));
+    console.log(` 🔵 Dispositivos en área: ${devicesInArea.length}`, devicesInArea.map(d => d.device_id));
   } else if (!liveAreaSearchMode) {
     setDevicesInLiveArea([]);
   }
@@ -1737,8 +1744,8 @@ useEffect(() => {
 // useEffect para conectar WebSocket cuando se activa Live Area Search
 useEffect(() => {
   if (liveAreaSearchMode && !socket) {
-    console.log('🟣 Conectando al WebSocket para detecciones...');
-    
+    console.log(' 🔵 Conectando al WebSocket para detecciones...');
+
     // Detectar dinámicamente el dominio actual (funciona para todos los dominios)
     const currentHost = window.location.hostname;
     const currentProtocol = window.location.protocol;
@@ -1869,7 +1876,7 @@ useEffect(() => {
   <div className="absolute top-40 left-1/2 -translate-x-1/2 z-40">
     <button
       onClick={handleExitLiveAreaSearch}
-      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl shadow-lg transition-all font-medium"
+      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg transition-all font-medium"
     >
       <span>Exit Live Area Search Mode</span>
       {liveAreaBounds && (
@@ -1920,7 +1927,7 @@ useEffect(() => {
   <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong'>
     <div className='rounded-4xl h-auto'>
       <div className="mb-4">
-  <h2 className='text-2xl font-bold text-purple-400 text-center rounded-4xl'>
+  <h2 className='text-2xl font-bold text-blue-400 text-center rounded-4xl'>
     📍 Live Area Monitor
   </h2>
   <div className="flex items-center justify-center gap-2 mt-2">
@@ -1981,7 +1988,7 @@ useEffect(() => {
                   
                   <div className="text-right">
                     <p className="text-xs text-white/50">Persons Detected</p>
-                    <p className={`text-2xl font-bold ${detectionCount > 0 ? 'text-purple-400' : 'text-white/40'}`}>
+                    <p className={`text-2xl font-bold ${detectionCount > 0 ? 'text-blue-400' : 'text-white/40'}`}>
                       👤 {detectionCount}
                     </p>
                   </div>
@@ -1994,8 +2001,8 @@ useEffect(() => {
 
       <div className="mt-6 pt-4 border-t border-white/20">
         <div className="text-center text-white/70 text-sm space-y-2">
-          <p>🎯 Monitoring: <strong className="text-purple-400">{devicesInLiveArea.length}</strong> device(s)</p>
-          <p>👥 Total Detected: <strong className="text-purple-400">
+          <p>🎯 Monitoring: <strong className="text-blue-400">{devicesInLiveArea.length}</strong> device(s)</p>
+          <p>👥 Total Detected: <strong className="text-blue-400">
             {Object.values(personDetections).reduce((sum, count) => sum + count, 0)}
           </strong> person(s)</p>
         </div>
@@ -2007,7 +2014,7 @@ useEffect(() => {
                 <div className="mt-4">
                   <button
                     onClick={() => setShowVideoStream(true)}
-                    className="w-full button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 shadow-lg"
+                    className="w-full button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white px-6 py-3 shadow-lg"
                   >
                     📹 Ver Todas las Transmisiones en Vivo
                   </button>
