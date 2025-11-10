@@ -1739,11 +1739,14 @@ useEffect(() => {
   if (liveAreaSearchMode && !socket) {
     console.log('🟣 Conectando al WebSocket para detecciones...');
     
-    // Usar la misma URL base pero con path /socket.io para WebRTC server
-    let socketUrl = config.API_BASE_URL.replace(':3001', '');
+    // Detectar dinámicamente el dominio actual (funciona para todos los dominios)
+    const currentHost = window.location.hostname;
+    const currentProtocol = window.location.protocol;
+    let socketUrl = `${currentProtocol}//${currentHost}`;
 
+    console.log('🔌 Detectado dominio actual:', currentHost);
     console.log('🔌 Conectando a:', socketUrl);
-    
+
     const newSocket = io(socketUrl, {
       path: '/socket.io',  // Path explícito
       transports: ['polling', 'websocket'],  // Intentar polling primero
