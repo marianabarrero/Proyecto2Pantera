@@ -5,6 +5,7 @@ import L, { Icon } from 'leaflet';
 import { ThreeDot } from 'react-loading-indicators';
 import VideoStream from './Components/VideoStream';
 import MultiVideoGrid from './Components/MultiVideoGrid';
+import io from 'socket.io-client';
 
 
 // --- MUI Date Picker Imports ---
@@ -779,7 +780,7 @@ const GeofencesListModal = ({ isOpen, onClose, onLoadGeofence, onDeleteGeofence 
 // --- Lista de Dispositivos ---
 // --- Lista de Dispositivos ---
 // --- Lista de Dispositivos ---
-const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord, onDeviceClick, isLiveMode, onOpenGeofencesList }) => {
+const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTravelRecord, onDeviceClick, isLiveMode, onOpenGeofencesList, onOpenLiveAreaSearch }) => {
   return (
     <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong'>
       <div className='rounded-4xl h-auto'>
@@ -878,6 +879,12 @@ const DevicesList = ({ allDevices, activeDeviceIds, onOpenDateSearch, onOpenTrav
       >
         <span className='text-white group-hover:text-white/90 duration-300'>📁 Saved Geofences</span>
       </button>
+      <button
+      onClick={onOpenLiveAreaSearch}
+      className='button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-transparent mt-6'
+    >
+  <span className='text-white group-hover:text-white/90 duration-300'>📍 Live Area Search</span>
+</button>
     </div>
   );
 };
@@ -957,7 +964,12 @@ const LocationMap = ({
   travelRecordDevice,
   selectedDeviceForZoom,
   onSaveGeofence,
-  isDrawingAllowed
+  isDrawingAllowed,
+  liveAreaSearchMode,
+  onLiveAreaDrawn,
+  liveAreaBounds,
+  devicesInLiveArea,
+  personDetections
 }) => {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [selectedJourneyIndex, setSelectedJourneyIndex] = useState(null);
@@ -1045,6 +1057,25 @@ const LocationMap = ({
           </p>
         </div>
       )}
+      {liveAreaSearchMode && !liveAreaBounds && (
+  <div className="mb-2 p-3 bg-purple-500/20 border border-purple-500/50 rounded-xl">
+    <p className="text-white text-sm text-center">
+      📍 <strong>Click on the map to draw the live monitoring area.</strong>
+      <br />
+      <strong>Right click</strong> when you have at least 3 points to complete the area.
+      <br />
+      <span className="text-xs text-white/70">Devices in this area will be monitored in real-time with person detection.</span>
+    </p>
+  </div>
+)}
+
+{liveAreaSearchMode && liveAreaBounds && devicesInLiveArea.length > 0 && (
+  <div className="mb-2 p-3 bg-purple-500/20 border border-purple-500/50 rounded-xl">
+    <p className="text-white text-sm text-center font-semibold">
+      🎯 Monitoring {devicesInLiveArea.length} device(s) in the selected area
+    </p>
+  </div>
+)}
 
       <MapContainer
         center={position}
@@ -1057,7 +1088,27 @@ const LocationMap = ({
         />
 
         {travelRecordMode && isDrawingAllowed && <PolygonDrawer onRectangleComplete={onAreaDrawn} />}
+        {liveAreaSearchMode && !liveAreaBounds && <PolygonDrawer onRectangleComplete={onLiveAreaDrawn} />}
         {selectedDeviceForZoom && <DeviceZoomHandler deviceId={selectedDeviceForZoom} paths={paths} />}
+
+        {/* Mostrar área dibujada en Live Area Search como polígono */}
+        {liveAreaSearchMode && liveAreaBounds && (
+          <Polygon
+            positions={[
+              [liveAreaBounds.minLat, liveAreaBounds.minLng],
+              [liveAreaBounds.maxLat, liveAreaBounds.minLng],
+              [liveAreaBounds.maxLat, liveAreaBounds.maxLng],
+              [liveAreaBounds.minLat, liveAreaBounds.maxLng]
+            ]}
+            pathOptions={{
+              color: '#a855f7',
+              weight: 3,
+              fillColor: '#a855f7',
+              fillOpacity: 0.15,
+              dashArray: '10, 5'
+            }}
+      />
+)}
 
 
 
@@ -1073,15 +1124,15 @@ const LocationMap = ({
           />
         ))}
 
-        {!travelRecordMode && locations.map((location, index) => {
-          // Saltar ubicaciones sin device_id válido
-          if (!location.device_id || location.device_id === 'Device' || location.device_id === 'unknown') {
-            return null;
-          }
+        {!travelRecordMode && !liveAreaSearchMode && locations.map((location, index) => {
+  // Saltar ubicaciones sin device_id válido
+  if (!location.device_id || location.device_id === 'Device' || location.device_id === 'unknown') {
+    return null;
+  }
 
-          const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
-          const activeDeviceIds = locations.map(loc => loc.device_id);
-          const deviceColor = getColorForDevice(location.device_id, activeDeviceIds);
+  const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
+  const activeDeviceIds = locations.map(loc => loc.device_id);
+  const deviceColor = getColorForDevice(location.device_id, activeDeviceIds);
 
           return (
             <CircleMarker
@@ -1107,6 +1158,57 @@ const LocationMap = ({
             </CircleMarker>
           );
         })}
+        {/* Markers para Live Area Search Mode */}
+{liveAreaSearchMode && devicesInLiveArea.map((location, index) => {
+  // Saltar ubicaciones sin device_id válido
+  if (!location.device_id || location.device_id === 'Device' || location.device_id === 'unknown') {
+    return null;
+  }
+
+  const markerPosition = [parseFloat(location.latitude), parseFloat(location.longitude)];
+  const activeDeviceIds = devicesInLiveArea.map(loc => loc.device_id);
+  const deviceColor = getColorForDevice(location.device_id, activeDeviceIds);
+  const detectionCount = personDetections[location.device_id] || 0;
+  const hasDetections = detectionCount > 0;
+
+  return (
+    <CircleMarker
+      key={location.device_id}
+      center={markerPosition}
+      radius={hasDetections ? 16 : 12}
+      pathOptions={{
+        fillColor: hasDetections ? '#a855f7' : deviceColor,
+        fillOpacity: hasDetections ? 1 : 0.9,
+        color: hasDetections ? '#ffffff' : deviceColor,
+        weight: hasDetections ? 3 : 2
+      }}
+    >
+      <Popup>
+        <div className="text-center min-w-[200px]">
+          <strong className="text-lg" style={{ color: deviceColor }}>
+            📱 {location.device_id}
+          </strong>
+          <br />
+          <div className={`my-3 p-3 rounded-lg ${hasDetections ? 'bg-purple-100' : 'bg-gray-100'}`}>
+            <strong className={`text-3xl ${hasDetections ? 'text-purple-600' : 'text-gray-400'}`}>
+              👤 {detectionCount}
+            </strong>
+            <p className="text-xs text-gray-600 mt-1">
+              {detectionCount === 1 ? 'person detected' : 'persons detected'}
+            </p>
+          </div>
+          <span className="text-sm text-gray-600">
+            📅 {formatTimestamp(location.timestamp_value)}
+          </span>
+          <br />
+          <span className="text-xs text-gray-500">
+            📍 {parseFloat(location.latitude).toFixed(6)}, {parseFloat(location.longitude).toFixed(6)}
+          </span>
+        </div>
+      </Popup>
+    </CircleMarker>
+  );
+})}
 
         {!travelRecordMode && Object.entries(paths).map(([deviceId, devicePath]) => {
           // Saltar rutas sin device_id válido
@@ -1230,6 +1332,12 @@ function App() {
   const [journeys, setJourneys] = useState([]);
   const [selectedDeviceForZoom, setSelectedDeviceForZoom] = useState(null);
   const [currentArea, setCurrentArea] = useState(null);
+  // Estados para Live Area Search
+  const [liveAreaSearchMode, setLiveAreaSearchMode] = useState(false);
+  const [liveAreaBounds, setLiveAreaBounds] = useState(null);
+  const [devicesInLiveArea, setDevicesInLiveArea] = useState([]);
+  const [personDetections, setPersonDetections] = useState({}); // {deviceId: personCount}
+  const [socket, setSocket] = useState(null);
   const [isSaveGeofenceModalOpen, setIsSaveGeofenceModalOpen] = useState(false);
   const [isGeofencesListModalOpen, setIsGeofencesListModalOpen] = useState(false);
   const [isDrawingAllowed, setIsDrawingAllowed] = useState(true);
@@ -1461,6 +1569,41 @@ function App() {
     setLoading(true);
     setIsDrawingAllowed(true);
   };
+  // Funciones para Live Area Search
+const handleOpenLiveAreaSearch = () => {
+  setLiveAreaSearchMode(true);
+  setIsLiveMode(false); // Pausar el modo live normal
+  setTravelRecordMode(false);
+  setJourneys([]);
+  setLiveAreaBounds(null);
+  setDevicesInLiveArea([]);
+  setPersonDetections({});
+  console.log('🟣 Live Area Search Mode activado');
+};
+
+const handleExitLiveAreaSearch = () => {
+  console.log('🟣 Saliendo de Live Area Search Mode...');
+  
+  // Desconectar WebSocket si existe
+  if (socket) {
+    socket.disconnect();
+    setSocket(null);
+  }
+  
+  setLiveAreaSearchMode(false);
+  setIsLiveMode(true); // Reactivar modo live normal
+  setLiveAreaBounds(null);
+  setDevicesInLiveArea([]);
+  setPersonDetections({});
+  
+  console.log('✅ Live Area Search Mode desactivado');
+};
+
+const handleLiveAreaDrawn = (area) => {
+  console.log('🟣 Área dibujada para Live Area Search:', area);
+  setLiveAreaBounds(area);
+  // La lógica de filtrado se hará en tiempo real con useEffect
+};
   const handleSaveGeofence = async (geofenceData) => {
     try {
       // Preparar el payload de la geocerca (sin journeys)
@@ -1554,6 +1697,126 @@ function App() {
     };
   }, [isLiveMode]);
 
+  // useEffect para filtrar dispositivos en Live Area Search
+useEffect(() => {
+  if (liveAreaSearchMode && liveAreaBounds && locationsData.length > 0) {
+    const devicesInArea = locationsData.filter(location => {
+      const lat = parseFloat(location.latitude);
+      const lng = parseFloat(location.longitude);
+      
+      return lat >= liveAreaBounds.minLat &&
+             lat <= liveAreaBounds.maxLat &&
+             lng >= liveAreaBounds.minLng &&
+             lng <= liveAreaBounds.maxLng;
+    });
+    
+    setDevicesInLiveArea(devicesInArea);
+    console.log(`🟣 Dispositivos en área: ${devicesInArea.length}`, devicesInArea.map(d => d.device_id));
+  } else if (!liveAreaSearchMode) {
+    setDevicesInLiveArea([]);
+  }
+}, [liveAreaSearchMode, liveAreaBounds, locationsData]);
+
+// useEffect para continuar obteniendo ubicaciones en modo Live Area Search
+useEffect(() => {
+  let interval;
+  if (liveAreaSearchMode) {
+    fetchLatestLocations(); // Fetch inicial
+    interval = setInterval(() => {
+      fetchLatestLocations();
+    }, config.POLLING_INTERVAL);
+  }
+
+  return () => {
+    if (interval) {
+      clearInterval(interval);
+    }
+  };
+}, [liveAreaSearchMode]);
+
+// useEffect para conectar WebSocket cuando se activa Live Area Search
+useEffect(() => {
+  if (liveAreaSearchMode && !socket) {
+    console.log('🟣 Conectando al WebSocket para detecciones...');
+    
+    // Determinar la URL del WebSocket (puerto 8081 para WebRTC server)
+    let socketUrl = config.API_BASE_URL;
+
+    // Si la URL incluye puerto 3001, reemplazarlo por 8081
+    if (socketUrl.includes(':3001')) {
+      socketUrl = socketUrl.replace(':3001', ':8081');
+    } else {
+      // Si no tiene puerto específico, agregar :8081
+      const url = new URL(socketUrl);
+      url.port = '8081';
+      socketUrl = url.toString();
+    }
+    console.log('🔌 Conectando a:', socketUrl);
+    
+    const newSocket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      timeout: 10000
+    });
+
+    newSocket.on('connect', () => {
+      console.log('✅ WebSocket conectado para detecciones');
+      console.log('📡 Socket ID:', newSocket.id);
+    });
+
+    newSocket.on('detection-update', (data) => {
+      console.log('👤 Detección recibida:', data);
+      const { deviceId, personCount, timestamp} = data;
+
+      // Solo actualizar si el dispositivo está en el área
+      setPersonDetections(prev => ({
+        ...prev,
+        [deviceId]: personCount
+      }));
+      console.log(`✅ Actualizado ${deviceId}: ${personCount} persona(s)`);
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('❌ WebSocket desconectado. Razón:', reason);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('❌ Error de conexión WebSocket:', error.message);
+    });
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log('🔄 WebSocket reconectado. Intento:', attemptNumber);
+    });
+
+    newSocket.on('reconnect_attempt', (attemptNumber) => {
+      console.log('🔄 Intentando reconectar... Intento:', attemptNumber);
+    });
+
+    newSocket.on('reconnect_error', (error) => {
+      console.error('❌ Error al reconectar:', error.message);
+    });
+
+    newSocket.on('reconnect_failed', () => {
+      console.error('❌ Falló la reconexión después de varios intentos');
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      if (newSocket) {
+        console.log('🔌 Cerrando conexión WebSocket');
+        newSocket.disconnect();
+      }
+    };
+  } else if (!liveAreaSearchMode && socket) {
+    console.log('🔌 Desconectando WebSocket');
+    socket.disconnect();
+    setSocket(null);
+    setPersonDetections({});
+  }
+}, [liveAreaSearchMode, socket]);
+
   const formatTimestamp = (timestamp) => {
     const date = new Date(parseInt(timestamp));
     return date.toLocaleString('es-ES', {
@@ -1606,6 +1869,21 @@ function App() {
                 </button>
               </div>
             )}
+            {liveAreaSearchMode && (
+  <div className="absolute top-40 left-1/2 -translate-x-1/2 z-40">
+    <button
+      onClick={handleExitLiveAreaSearch}
+      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl shadow-lg transition-all font-medium"
+    >
+      <span>Exit Live Area Search Mode</span>
+      {liveAreaBounds && (
+        <span className="ml-2 px-2 py-1 bg-white/20 rounded-lg text-sm">
+          {devicesInLiveArea.length} device(s) in area
+        </span>
+      )}
+    </button>
+  </div>
+)}
 
             <div className="w-full md:w-3/4 animate-slide-in-left interactive-glow rounded-4xl">
               <LocationMap
@@ -1620,21 +1898,115 @@ function App() {
                 selectedDeviceForZoom={selectedDeviceForZoom}
                 onSaveGeofence={() => setIsSaveGeofenceModalOpen(true)}
                 isDrawingAllowed={isDrawingAllowed}
+                liveAreaSearchMode={liveAreaSearchMode}
+                onLiveAreaDrawn={handleLiveAreaDrawn}
+                liveAreaBounds={liveAreaBounds}
+                devicesInLiveArea={devicesInLiveArea}
+                personDetections={personDetections}
               />
             </div>
             <div className="w-full md:w-1/4 flex flex-col gap-8 text-center animate-slide-in-right">
               <h1 className="font-bold text-7xl bg-gradient-to-r from-sky-400 to-cyan-300 text-transparent bg-clip-text" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {config.APP_NAME}
               </h1>
-              <DevicesList
-                allDevices={allDevices}
-                activeDeviceIds={activeDeviceIds}
-                onOpenDateSearch={() => setIsDateSearchModalOpen(true)}
-                onOpenTravelRecord={handleOpenTravelRecord}
-                onDeviceClick={handleDeviceClick}
-                isLiveMode={isLiveMode}
-                onOpenGeofencesList={() => setIsGeofencesListModalOpen(true)}
-              />
+              {!liveAreaSearchMode ? (
+  <DevicesList
+    allDevices={allDevices}
+    activeDeviceIds={activeDeviceIds}
+    onOpenDateSearch={() => setIsDateSearchModalOpen(true)}
+    onOpenTravelRecord={handleOpenTravelRecord}
+    onDeviceClick={handleDeviceClick}
+    isLiveMode={isLiveMode}
+    onOpenGeofencesList={() => setIsGeofencesListModalOpen(true)}
+    onOpenLiveAreaSearch={handleOpenLiveAreaSearch}
+  />
+) : (
+  <div className='flex flex-col p-8 rounded-4xl glassmorphism-strong'>
+    <div className='rounded-4xl h-auto'>
+      <div className="mb-4">
+  <h2 className='text-2xl font-bold text-purple-400 text-center rounded-4xl'>
+    📍 Live Area Monitor
+  </h2>
+  <div className="flex items-center justify-center gap-2 mt-2">
+    <div className={`w-2 h-2 rounded-full ${socket && socket.connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+    <span className="text-xs text-white/60">
+      {socket && socket.connected ? 'Connected' : 'Disconnected'}
+    </span>
+  </div>
+</div>
+      
+      
+      {!liveAreaBounds ? (
+        <div className="text-center text-white/60 py-8">
+          <p className="mb-2">🗺️ Draw an area on the map</p>
+          <p className="text-sm">Click to add points, right-click to finish</p>
+        </div>
+      ) : devicesInLiveArea.length === 0 ? (
+        <div className="text-center text-white/60 py-8">
+          <p className="mb-2">📭 No devices in this area</p>
+          <p className="text-sm">Waiting for devices to enter...</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-[500px] overflow-y-auto">
+          {devicesInLiveArea.map((device, index) => {
+            const deviceColor = getColorForDevice(device.device_id, devicesInLiveArea.map(d => d.device_id));
+            const detectionCount = personDetections[device.device_id] || 0;
+
+            return (
+              <div
+                key={device.device_id}
+                className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-4 transition-all cursor-pointer"
+                onClick={() => handleDeviceClick(device.device_id)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{
+                        backgroundColor: deviceColor,
+                        boxShadow: `0 0 10px ${deviceColor}`
+                      }}
+                    />
+                    <span className="text-white font-mono text-sm font-medium">
+                      {device.device_id}
+                    </span>
+                  </div>
+                  
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-green-500/20 text-green-400">
+                    Active
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
+                  <div className="text-left">
+                    <p className="text-xs text-white/50">Last Update</p>
+                    <p className="text-xs text-white/70">{formatTimestamp(device.timestamp_value)}</p>
+                  </div>
+                  
+                  <div className="text-right">
+                    <p className="text-xs text-white/50">Persons Detected</p>
+                    <p className={`text-2xl font-bold ${detectionCount > 0 ? 'text-purple-400' : 'text-white/40'}`}>
+                      👤 {detectionCount}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-6 pt-4 border-t border-white/20">
+        <div className="text-center text-white/70 text-sm space-y-2">
+          <p>🎯 Monitoring: <strong className="text-purple-400">{devicesInLiveArea.length}</strong> device(s)</p>
+          <p>👥 Total Detected: <strong className="text-purple-400">
+            {Object.values(personDetections).reduce((sum, count) => sum + count, 0)}
+          </strong> person(s)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
               {isLiveMode && activeDeviceIds.length > 0 && !showVideoStream && (
                 <div className="mt-4">
                   <button
