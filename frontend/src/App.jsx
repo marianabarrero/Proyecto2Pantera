@@ -1739,22 +1739,14 @@ useEffect(() => {
   if (liveAreaSearchMode && !socket) {
     console.log('🟣 Conectando al WebSocket para detecciones...');
     
-    // Determinar la URL del WebSocket (puerto 8081 para WebRTC server)
-    let socketUrl = config.API_BASE_URL;
+    // Usar la misma URL base pero con path /socket.io para WebRTC server
+    let socketUrl = config.API_BASE_URL.replace(':3001', '');
 
-    // Si la URL incluye puerto 3001, reemplazarlo por 8081
-    if (socketUrl.includes(':3001')) {
-      socketUrl = socketUrl.replace(':3001', ':8081');
-    } else {
-      // Si no tiene puerto específico, agregar :8081
-      const url = new URL(socketUrl);
-      url.port = '8081';
-      socketUrl = url.toString();
-    }
     console.log('🔌 Conectando a:', socketUrl);
     
     const newSocket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
+      path: '/socket.io',  // Path explícito
+      transports: ['polling', 'websocket'],  // Intentar polling primero
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 10,
@@ -1764,6 +1756,7 @@ useEffect(() => {
     newSocket.on('connect', () => {
       console.log('✅ WebSocket conectado para detecciones');
       console.log('📡 Socket ID:', newSocket.id);
+      console.log('🔗 Transport:', newSocket.io.engine.transport.name);
     });
 
     newSocket.on('detection-update', (data) => {
