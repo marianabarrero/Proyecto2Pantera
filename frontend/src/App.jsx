@@ -1808,7 +1808,7 @@ useEffect(() => {
     setSocket(null);
     setPersonDetections({});
   }
-}, [liveAreaSearchMode, socket]);
+}, [liveAreaSearchMode]);
 
   const formatTimestamp = (timestamp) => {
     const date = new Date(parseInt(timestamp));
