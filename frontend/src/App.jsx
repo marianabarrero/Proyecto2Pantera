@@ -113,28 +113,33 @@ const PolygonDrawer = ({ onRectangleComplete }) => {
   useMapEvents({
     click(e) {
       // Agregar punto al polígono
-      setPoints([...points, e.latlng]);
+      console.log('🖱️ Click en mapa:', e.latlng.lat, e.latlng.lng);
+      setPoints([...points, [e.latlng.lat, e.latlng.lng]]);
     },
     mousemove(e) {
       if (points.length > 0) {
-        setCurrentPoint(e.latlng);
+        setCurrentPoint([e.latlng.lat, e.latlng.lng]);
       }
     },
     contextmenu(e) {
       // Clic derecho: finalizar polígono
       e.originalEvent.preventDefault();
+      
+      console.log('🖱️ Click derecho detectado');
+      console.log('📍 Puntos actuales:', points.length);
+      
       if (points.length >= 3) {
-        // Convertir el polígono a un bounding box (rectángulo)
-        const lats = points.map(p => p.lat);
-        const lngs = points.map(p => p.lng);
+        console.log('✅ Polígono válido, completando...');
+        console.log('📊 Polígono final:', points);
         
-        onRectangleComplete({
-          minLat: Math.min(...lats),
-          maxLat: Math.max(...lats),
-          minLng: Math.min(...lngs),
-          maxLng: Math.max(...lngs)
-        });
+        // Enviar el polígono real (NO un rectángulo)
+        onRectangleComplete(points);
         
+        setPoints([]);
+        setCurrentPoint(null);
+      } else {
+        console.log('❌ Se necesitan al menos 3 puntos. Tienes:', points.length);
+        alert('Necesitas al menos 3 puntos para completar el área');
         setPoints([]);
         setCurrentPoint(null);
       }
@@ -145,6 +150,7 @@ const PolygonDrawer = ({ onRectangleComplete }) => {
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && points.length > 0) {
+        console.log('❌ Dibujo cancelado con ESC');
         setPoints([]);
         setCurrentPoint(null);
       }
@@ -161,39 +167,38 @@ const PolygonDrawer = ({ onRectangleComplete }) => {
     return (
       <>
         {/* Polígono relleno */}
-        {points.length >= 3 && currentPoint && (
+        {points.length >= 2 && currentPoint && (
           <Polygon
             positions={displayPoints}
             pathOptions={{
-              color: '#3388ff',
-              weight: 2,
+              color: '#3b82f6',
+              weight: 3,
+              fillColor: '#60a5fa',
               fillOpacity: 0.2,
-              dashArray: '5, 5'
+              dashArray: '10, 5'
             }}
           />
         )}
         
         {/* Líneas conectoras */}
-        {points.length > 0 && (
-          <Polyline
-            positions={displayPoints}
-            pathOptions={{
-              color: '#3388ff',
-              weight: 2,
-              dashArray: '5, 5'
-            }}
-          />
-        )}
+        <Polyline
+          positions={displayPoints}
+          pathOptions={{
+            color: '#3b82f6',
+            weight: 3,
+            dashArray: '10, 5'
+          }}
+        />
 
         {/* Marcadores para cada punto */}
         {points.map((point, idx) => (
           <CircleMarker
             key={idx}
             center={point}
-            radius={5}
+            radius={6}
             pathOptions={{ 
-              color: '#3388ff', 
-              fillColor: '#3388ff', 
+              color: '#ffffff',
+              fillColor: '#3b82f6', 
               fillOpacity: 1,
               weight: 2
             }}
