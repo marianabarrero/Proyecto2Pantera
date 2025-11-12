@@ -1504,6 +1504,16 @@ function App() {
     setIsDeviceSelectionModalOpen(true);
   };
 
+  const handleDeviceClick = (deviceId) => {
+  setSelectedDevice(deviceId);
+  
+  // Centrar el mapa en el dispositivo seleccionado
+  const device = devices.find(d => d.device_id === deviceId);
+  if (device && device.latitude && device.longitude) {
+    setMapCenter([device.latitude, device.longitude]);
+  }
+};
+
   const handleDeviceSelected = (deviceIds) => {
     setSelectedDeviceForTravel(deviceIds);
     setTravelRecordMode(true);
