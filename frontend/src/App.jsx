@@ -1546,15 +1546,17 @@ const handleAreaDrawn = async (polygon) => {
     const allJourneys = [];
 
     for (const deviceId of selectedDeviceForTravel) {
-      // Convertir polígono a query string
-      const polygonParam = JSON.stringify(polygon);
-      const url = `${config.API_BASE_URL}/api/location/area-records?device_id=${deviceId}&polygon=${encodeURIComponent(polygonParam)}`;
+      const url = `${config.API_BASE_URL}/api/location/area-records`;
 
-      const response = await fetch(url, {
-        method: 'POST',
+        const response = await fetch(url, {
+          method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          device_id: deviceId,
+          polygon: polygon
+        })
       });
 
       if (response.ok) {
@@ -1564,6 +1566,8 @@ const handleAreaDrawn = async (polygon) => {
           device_id: deviceId
         }));
         allJourneys.push(...journeysWithDevice);
+      } else {
+        console.error(`Error fetching journeys for device ${deviceId}:`, response.status);
       }
     }
 
