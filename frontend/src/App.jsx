@@ -1945,6 +1945,16 @@ useEffect(() => {
               <h1 className="font-bold text-7xl bg-gradient-to-r from-sky-400 to-cyan-300 text-transparent bg-clip-text" style={{ fontFamily: 'Poppins, sans-serif' }}>
                 {config.APP_NAME}
               </h1>
+              {isLiveMode && activeDeviceIds.length > 0 && !showVideoStream && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => setShowVideoStream(true)}
+                    className="w-full button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white px-6 py-3 shadow-lg"
+                  >
+                    📹 Ver Todas las Transmisiones en Vivo
+                  </button>
+                </div>
+              )}
               {!liveAreaSearchMode ? (
   <DevicesList
     allDevices={allDevices}
@@ -2043,18 +2053,9 @@ useEffect(() => {
     </div>
   </div>
 )}
-              {isLiveMode && activeDeviceIds.length > 0 && !showVideoStream && (
-                <div className="mt-4">
-                  <button
-                    onClick={() => setShowVideoStream(true)}
-                    className="w-full button-hover inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white px-6 py-3 shadow-lg"
-                  >
-                    📹 Ver Todas las Transmisiones en Vivo
-                  </button>
-                </div>
-              )}
 
-            </div>
+
+</div>
 
            
             {/* ⭐ MODAL DE VIDEO - MÚLTIPLES DISPOSITIVOS ⭐ */}
