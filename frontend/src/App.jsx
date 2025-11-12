@@ -1631,7 +1631,7 @@ const handleLiveAreaDrawn = (polygon) => {
 };
   const handleSaveGeofence = async (geofenceData) => {
     try {
-      // Preparar el payload de la geocerca (sin journeys)
+      // Preparar el payload de la geocercas (sin journeys)
       const geofencePayload = {
         name: geofenceData.name,
         description: geofenceData.description || '',
