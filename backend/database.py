@@ -201,8 +201,8 @@ class Database:
         FROM location_data
         WHERE device_id = $1
         AND ST_Contains(
-        ST_GeomFromText($2, 4326),
-        ST_Point(longitude, latitude)
+            ST_GeomFromText($2, 4326),
+            ST_SetSRID(ST_Point(longitude, latitude), 4326)
         )
         ORDER BY timestamp_value ASC;
         """
