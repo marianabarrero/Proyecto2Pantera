@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import List, Optional
 
+
 from database import Database
 from udp_server import start_udp_server, stop_udp_server
 from webrtc_server import start_webrtc_server
@@ -29,6 +30,11 @@ class GeofenceSaveRequest(BaseModel):
     """Request para guardar geocerca con journeys"""
     geofence: GeofenceCreate
     journeys: Optional[List[GeofenceJourney]] = None
+
+class AreaSearchRequest(BaseModel):
+    device_id: str
+    polygon: List[List[float]]
+
 
 # Crear la aplicación FastAPI
 app = FastAPI(
@@ -156,14 +162,12 @@ async def get_devices():
         print(f"Error obteniendo dispositivos: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
+
 @app.post("/api/location/area-records")
-async def get_area_records(
-    device_id: str = Query(..., description="ID del dispositivo"),
-    polygon: List[List[float]] = Query(..., description="Polígono como lista de coordenadas [[lat, lng], ...]")
-):
+async def get_area_records(request: AreaSearchRequest):
     """Endpoint para obtener recorridos de un dispositivo dentro de un polígono"""
     try:
-        results = await db.get_locations_in_polygon(polygon, device_id)
+        results = await db.get_locations_in_polygon(request.polygon, request.device_id)
         
         if not results:
             return []
@@ -207,52 +211,7 @@ async def get_area_records(
     except Exception as e:
         print(f"Error obteniendo recorridos por área: {e}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
-    """Endpoint para obtener recorridos de un dispositivo dentro de un área rectangular"""
-    try:
-        results = await db.get_locations_in_area(minLat, maxLat, minLng, maxLng, device_id)
-        
-        if not results:
-            return []
-        
-        # Separar en recorridos basados en diferencia de tiempo de 5 minutos
-        journeys = []
-        current_journey = []
-        
-        for i, point in enumerate(results):
-            if i == 0:
-                current_journey.append(point)
-            else:
-                prev_time = results[i-1]['timestamp_value']
-                curr_time = point['timestamp_value']
-                time_diff = curr_time - prev_time
-                
-                # Si la diferencia es mayor a 5 minutos (300000 ms), es un nuevo recorrido
-                if time_diff > 300000:
-                    if current_journey:
-                        journeys.append(current_journey)
-                    current_journey = [point]
-                else:
-                    current_journey.append(point)
-        
-        # Agregar el último recorrido
-        if current_journey:
-            journeys.append(current_journey)
-        
-        # Formatear respuesta
-        formatted_journeys = []
-        for idx, journey in enumerate(journeys):
-            formatted_journeys.append({
-                'journey_id': idx,
-                'points': journey,
-                'start_time': journey[0]['timestamp_value'],
-                'end_time': journey[-1]['timestamp_value']
-            })
-        
-        return formatted_journeys
     
-    except Exception as e:
-        print(f"Error obteniendo recorridos por área: {e}")
-        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 # ==================== GEOFENCES ENDPOINTS ====================
 
