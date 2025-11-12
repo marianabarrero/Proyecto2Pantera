@@ -187,17 +187,61 @@ class Database:
             records = await connection.fetch(query, device_id, min_lat, max_lat, min_lng, max_lng)
             return [dict(record) for record in records]
         
+    async def get_locations_in_polygon(self, polygon_points, device_id):
+        """Obtiene ubicaciones de un dispositivo dentro de un polígono usando PostGIS"""
+        # Convertir [[lat, lng], ...] a formato WKT: POLYGON((lng lat, lng lat, ...))
+        # IMPORTANTE: PostGIS usa (longitude, latitude), no (lat, lng)
+        coords = ', '.join([f'{lng} {lat}' for lat, lng in polygon_points])
+        # Cerrar el polígono (primer punto = último punto)
+        first_point = polygon_points[0]
+        polygon_wkt = f'POLYGON(({coords}, {first_point[1]} {first_point[0]}))'
+    
+        query = """
+        SELECT latitude, longitude, timestamp_value, created_at, device_id
+        FROM location_data
+        WHERE device_id = $1
+        AND ST_Contains(
+        ST_GeomFromText($2, 4326),
+        ST_Point(longitude, latitude)
+        )
+        ORDER BY timestamp_value ASC;
+        """
+    
+        async with self.pool.acquire() as connection:
+            records = await connection.fetch(query, device_id, polygon_wkt)
+            return [dict(record) for record in records]    
+    
+        
             # ==================== GEOFENCES ====================
     
     async def create_geofence(self, geofence_data: dict, journeys: list = None):
-        """Crea una nueva geocerca y opcionalmente guarda sus journeys"""
+        """Crea una nueva geocerca con POSTGIS y opcionalmente añade journeys"""
         async with self.pool.acquire() as connection:
             async with connection.transaction():
+                if 'polygon' in geofence_data and geofence_data['polygon']:
+                    polygon_points = geofence_data['polygon']
+                    coords = ', '.join([f'{lng} {lat}' for lat, lng in polygon_points])
+                    first_point = polygon_points[0]
+                    polygon_wkt = f'POLYGON(({coords}, {first_point[1]} {first_point[0]}))'
+                    # Calcular bounding box para compatibilidad
+                    lats = [p[0] for p in polygon_points]
+                    lngs = [p[1] for p in polygon_points]
+                    min_lat, max_lat = min(lats), max(lats)
+                    min_lng, max_lng = min(lngs), max(lngs)
+                else:
+                # Es un rectángulo antiguo (compatibilidad con código viejo)
+                    min_lat = geofence_data['min_lat']
+                    max_lat = geofence_data['max_lat']
+                    min_lng = geofence_data['min_lng']
+                    max_lng = geofence_data['max_lng']
+                    polygon_wkt = f'POLYGON(({min_lng} {min_lat}, {min_lng} {max_lat}, {max_lng} {max_lat}, {max_lng} {min_lat}, {min_lng} {min_lat}))'
+            
+                # Crear la tabla de geocercas si no existe
                 # Insertar geocerca
                 #el id se genera automáticamente por la base de datos, es necesario para vincular los journeys
                 query = """
-                INSERT INTO geofences (name, description, min_lat, max_lat, min_lng, max_lng, device_ids, created_by)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                INSERT INTO geofences (name, description, min_lat, max_lat, min_lng, max_lng, polygon_geom, device_ids, created_by)
+                VALUES ($1, $2, $3, $4, $5, $6, ST_GeomFromText($7, 4326), $8, $9)
                 RETURNING id, name, description, min_lat, max_lat, min_lng, max_lng, device_ids, created_by, created_at, updated_at, is_active;
                 """
                 # extrae el ID generado
@@ -205,10 +249,11 @@ class Database:
                     query,
                     geofence_data['name'],
                     geofence_data.get('description'),
-                    geofence_data['min_lat'],
-                    geofence_data['max_lat'],
-                    geofence_data['min_lng'],
-                    geofence_data['max_lng'],
+                    min_lat,        # Usar variables locales
+                    max_lat,        # Usar variables locales
+                    min_lng,        # Usar variables locales
+                    max_lng,        # Usar variables locales
+                    polygon_wkt,
                     geofence_data['device_ids'],
                     geofence_data.get('created_by')
                 )

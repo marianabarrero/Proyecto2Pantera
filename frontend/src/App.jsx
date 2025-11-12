@@ -1514,50 +1514,63 @@ function App() {
     setIsDrawingAllowed(true);
   };
 
-  const handleAreaDrawn = async (area) => {
-    if (!selectedDeviceForTravel || selectedDeviceForTravel.length === 0) return;
-    setCurrentArea(area);
-    setIsDrawingAllowed(false);
-    setLoading(true);
-    try {
-      const allJourneys = [];
+const handleAreaDrawn = async (polygon) => {
+  if (!selectedDeviceForTravel || selectedDeviceForTravel.length === 0) return;
+  
+  // Calcular bounding box del polígono para guardar en geocerca
+  const lats = polygon.map(p => p[0]);
+  const lngs = polygon.map(p => p[1]);
+  const area = {
+    minLat: Math.min(...lats),
+    maxLat: Math.max(...lats),
+    minLng: Math.min(...lngs),
+    maxLng: Math.max(...lngs),
+    polygon: polygon  // Guardar el polígono completo
+  };
+  
+  setCurrentArea(area);
+  setIsDrawingAllowed(false);
+  setLoading(true);
+  
+  try {
+    const allJourneys = [];
 
-      for (const deviceId of selectedDeviceForTravel) {
-        const url = `${config.API_BASE_URL}/api/location/area-records?minLat=${area.minLat}&maxLat=${area.maxLat}&minLng=${area.minLng}&maxLng=${area.maxLng}&device_id=${deviceId}`;
+    for (const deviceId of selectedDeviceForTravel) {
+      // Convertir polígono a query string
+      const polygonParam = JSON.stringify(polygon);
+      const url = `${config.API_BASE_URL}/api/location/area-records?device_id=${deviceId}&polygon=${encodeURIComponent(polygonParam)}`;
 
-        const response = await fetch(url);
-
-        if (response.ok) {
-          const data = await response.json();
-          const journeysWithDevice = data.map(journey => ({
-            ...journey,
-            device_id: deviceId
-          }));
-          allJourneys.push(...journeysWithDevice);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         }
-      }
+      });
 
-      if (allJourneys.length > 0) {
-        setJourneys(allJourneys);
-        setError(null);
-      } else {
-        setError('No se encontraron recorridos en esta área para los dispositivos seleccionados.');
-        setJourneys([]);
+      if (response.ok) {
+        const data = await response.json();
+        const journeysWithDevice = data.map(journey => ({
+          ...journey,
+          device_id: deviceId
+        }));
+        allJourneys.push(...journeysWithDevice);
       }
-    } catch (err) {
-      setError('Error al buscar recorridos en el área.');
-      console.error('Error fetching area records:', err);
-    } finally {
-      setLoading(false);
     }
-  };
-  const handleDeviceClick = (deviceId) => {
-    if (!isLiveMode) {
-      setSelectedDeviceForZoom(deviceId);
-      // Resetear después de un tiempo para permitir múltiples clicks
-      setTimeout(() => setSelectedDeviceForZoom(null), 2000);
+
+    if (allJourneys.length > 0) {
+      setJourneys(allJourneys);
+      setError(null);
+    } else {
+      setError('No se encontraron recorridos en esta área para los dispositivos seleccionados.');
+      setJourneys([]);
     }
-  };
+  } catch (err) {
+    console.error('Error fetching journeys:', err);
+    setError('Error al buscar recorridos.');
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   const handleExitTravelRecord = () => {
@@ -1626,6 +1639,7 @@ const handleLiveAreaDrawn = (polygon) => {
         max_lat: geofenceData.area.maxLat,
         min_lng: geofenceData.area.minLng,
         max_lng: geofenceData.area.maxLng,
+        polygon: geofenceData.area.polygon,
         device_ids: geofenceData.devices,
         created_by: 'julicarolinav'
       };
